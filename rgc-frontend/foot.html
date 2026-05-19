@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>脚底压力热力图（实时 专业跑姿分析）</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="css/foot.css" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+    <div class="tight-card">
+        <header>
+            <!-- 返回按钮 -->
+            <a class="back-button" href="index.html">
+                <i class="fas fa-arrow-left"></i> 返回主页
+            </a>
+            <h4><i class="fas fa-wave-square"></i> 脚底压力分析 <i class="fas fa-wave-square"></i></h4>
+        </header>
+
+        <div class="title-row">
+            <i class="fas fa-running"></i> 跑姿压力热力分析
+        </div>
+
+        <!-- 模式选择区域 -->
+        <div class="control-panel">
+            <div class="mode-selector">
+                <label for="modeSelect"><i class="fas fa-cog"></i> 分析模式:</label>
+                <select id="modeSelect" onchange="switchMode()">
+                    <option value="static">静止模式</option>
+                    <option value="motion">运动模式</option>
+                </select>
+            </div>
+
+            <!-- 目标跑姿设置区域 -->
+            <div class="target-selector">
+                <label for="targetGaitSelect"><i class="fas fa-bullseye"></i> 目标跑姿:</label>
+                <select id="targetGaitSelect" onchange="setTargetGait()">
+                    <option value="none">无目标</option>
+                    <option value="forefoot">前脚掌跑法</option>
+                    <option value="fullfoot">全脚掌跑法</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="targetStatus">
+            <i class="fas fa-info-circle"></i> 请选择目标跑姿进行对比分析
+        </div>
+
+        <!-- 双脚热力图容器 -->
+        <div class="feet-container">
+            <div class="foot-wrapper">
+                <div class="foot-label">
+                    <i class="fas fa-shoe-prints"></i> 左脚
+                </div>
+                <canvas height="400" id="leftCanvas" width="300"></canvas>
+                <div id="leftLegend" class="foot-legend">等待数据中…</div>
+            </div>
+            <div class="foot-wrapper">
+                <div class="foot-label">
+                    <i class="fas fa-shoe-prints"></i> 右脚
+                </div>
+                <canvas height="400" id="rightCanvas" width="300"></canvas>
+                <div id="rightLegend" class="foot-legend">等待数据中…</div>
+            </div>
+        </div>
+
+        <!-- 数据趋势和分析区域 -->
+        <div class="data-panel">
+            <div class="trend-container">
+                <div class="panel-header">
+                    <i class="fas fa-chart-line"></i> 压力趋势
+                </div>
+                <canvas height="90" id="trendCanvas" width="460"></canvas>
+                <div class="trend-footer">
+                    <div id="trendLegend"></div>
+                    <div id="stepRateBox"></div>
+                </div>
+            </div>
+
+            <div class="analysis-container">
+                <div class="panel-header">
+                    <i class="fas fa-microphone-alt"></i> 语音播报
+                </div>
+                <div id="speakBox">等待分析数据...</div>
+            </div>
+        </div>
+
+        <div class="mb-1" id="proSummary"></div>
+        <div class="mb-1" id="analysis"></div>
+
+        <!-- 连接状态指示器 -->
+        <div class="connection-status">
+            <div class="status-item">
+                <span class="status-label">左脚设备:</span>
+                <span class="status-indicator" id="leftStatus">连接中...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">右脚设备:</span>
+                <span class="status-indicator" id="rightStatus">连接中...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/deviceConfig.js"></script>
+<script src="js/foot.js"></script>
+</body>
+</html>

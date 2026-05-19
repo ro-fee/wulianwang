@@ -1,0 +1,5 @@
+window.RGC_DEVICE_CONFIG = Object.freeze({
+  LEFT_DEVICE_IP: '192.168.200.1',
+  RIGHT_DEVICE_IP: '192.168.15.1',
+  WS_PORT: 8765,
+});

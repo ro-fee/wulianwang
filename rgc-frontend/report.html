@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跑姿分析报告</title>
+    <link rel="stylesheet" href="rgc-frontend/css/index.css">
+    <link rel="stylesheet" href="rgc-frontend/css/foot.css">
+    <link rel="stylesheet" href="rgc-frontend/css/arm.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 添加数据标签插件 -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #00f0ff;
+            --secondary-color: #9d4edd;
+            --accent-color: #ff2a6d;
+            --bg-dark: #0f172a;
+            --bg-darker: #020617;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-light: #e2e8f0;
+            --text-lighter: #f8fafc;
+            --border-glow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        body {
+            background-color: var(--bg-darker);
+            background-image:
+                linear-gradient(rgba(38, 30, 77, 0.8) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 23, 42, 0.8) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-light);
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            margin: 0;
+            padding: 20px 0;
+        }
+
+        .report-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-bottom: 1px solid var(--primary-color);
+            box-shadow: var(--border-glow);
+            border-radius: 8px;
+            background: var(--card-bg);
+        }
+
+        .report-header h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.7);
+        }
+
+        .report-header p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .analysis-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .analysis-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
+            padding-left: 15px;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0px;
+            margin-bottom: 100px;
+            justify-content: center;
+        }
+
+        .chart-wrapper {
+            flex: 1;
+            margin: 0 auto;
+            display: block;
+            min-width: 300px;
+            height: 350px;
+            padding: 20px;
+            background: rgba(15, 23, 42, 1);
+            border-radius: 10px;
+            border: 1px solid rgba(157, 78, 221, 0.3);
+            box-shadow: 0 0 15px rgba(157, 78, 221, 0.2);
+        }
+
+        .analysis-summary {
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.6;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .analysis-summary h3 {
+            color: var(--accent-color);
+            margin-top: 0;
+            border-bottom: 1px solid rgba(255, 42, 109, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .analysis-summary ul {
+            padding-left: 20px;
+        }
+
+        .analysis-summary li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 10px;
+        }
+
+        .analysis-summary li:before {
+            content: '•';
+            color: var(--primary-color);
+            position: absolute;
+            left: 0;
+        }
+
+        .recommendation {
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .recommendation h3 {
+            color: var(--secondary-color);
+            margin-top: 0;
+            border-bottom: 1px solid rgba(157, 78, 221, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .recommendation ol {
+            padding-left: 20px;
+        }
+
+        .recommendation li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="report-container">
+        <div class="report-header">
+            <h1>跑姿分析报告</h1>
+            <p>运动日期: 2025年8月19日 | 运动时长: 0.13分钟</p>
+        </div>
+
+        <!-- 脚掌压力分析部分 -->
+        <div class="analysis-section">
+            <h2 class="section-title">脚掌压力分析</h2>
+
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="landingPoseChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="pressureDistributionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="analysis-summary">
+                <h3>分析总结:</h3>
+                <ul>
+                    <li>落地姿态: 主要以后跟落地(52%)，中掌落地(28%)，前掌落地(10%)，全掌落地(10%)</li>
+                    <li>压力分布: 前掌外侧压力占比最高(31%)，前掌内侧(19%)，中掌外侧(14%)，中掌内侧(13%)，后跟外侧(9%)，后跟内侧(8%)</li>
+                    <li>压力中心点轨迹: 整体偏外侧，存在轻微过度内旋现象</li>
+                    <li>左右脚对称性: 良好，压力分布差异小于10%</li>
+                    <li>步频: 平均4.5步/分钟</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 手臂姿态分析部分 -->
+        <div class="analysis-section">
+            <h2 class="section-title">手臂姿态分析</h2>
+
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="armAngleChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="armSymmetryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="analysis-summary">
+                <h3>分析总结:</h3>
+                <ul>
+                    <li>平均摆动角度: 左臂28°，右臂31°</li>
+                    <li>摆动频率: 与步频不同步，平均3.7次/分钟</li>
+                    <li>对称性: 左臂摆动幅度略小于右臂(差异3°)</li>
+                    <li>摆动平面: 基本保持在矢状面内，偶有轻微横向摆动</li>
+                    <li>摆动节奏: 与下肢配合较差，相位差非常不稳定</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 综合建议部分 -->
+        <div class="analysis-section">
+            <h2 class="section-title">综合建议</h2>
+
+            <div class="recommendation">
+                <h3>改进建议:</h3>
+                <ol>
+                    <li>尝试增加中掌落地比例，减少前掌落地压力，降低小腿疲劳风险</li>
+                    <li>注意左臂摆动幅度，适当增加以提高步频对称性</li>
+                    <li>跑步时保持手臂在腰部高度，避免过度摆动</li>
+                    <li>考虑进行核心稳定性训练，改善跑步时的躯干控制</li>
+                    <li>建议加强足弓力量训练，改善轻微过度内旋现象</li>
+                    <li>步频可适当提高至180步/分钟，以减少着地冲击力</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化图表
+        document.addEventListener('DOMContentLoaded', function () {
+            // 全局配置 - 启用数据标签插件
+            Chart.register(ChartDataLabels);
+
+            // 落地姿态饼图 - 增强版
+            const landingPoseCtx = document.getElementById('landingPoseChart').getContext('2d');
+            new Chart(landingPoseCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['后跟落地', '中掌落地', '前掌落地', '全掌落地'],
+                    datasets: [{
+                        data: [52, 28, 10, 10],
+                        backgroundColor: [
+                            'rgba(0, 240, 255, 0.7)',
+                            'rgba(157, 78, 221, 0.7)',
+                            'rgba(255, 42, 109, 0.7)',
+                            'rgba(46, 204, 113, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(0, 240, 255, 1)',
+                            'rgba(157, 78, 221, 1)',
+                            'rgba(255, 42, 109, 1)',
+                            'rgba(46, 204, 113, 1)'
+                        ],
+                        borderWidth: 2,
+                        hoverOffset: 15
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#e2e8f0',
+                                font: { size: 14 },
+                                padding: 20
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '落地姿态分布',
+                            color: '#00f0ff',
+                            font: { size: 18, weight: 'bold' },
+                            padding: { top: 10, bottom: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#00f0ff',
+                            bodyColor: '#e2e8f0',
+                            borderColor: '#9d4edd',
+                            borderWidth: 1,
+                            padding: 15,
+                            displayColors: true,
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value}% (${percentage}%)`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            color: '#fff',
+                            font: { size: 14, weight: 'bold' },
+                            formatter: function (value) {
+                                return `${value}%`;
+                            },
+                            anchor: 'end',
+                            align: 'start',
+                            offset: 5,
+                            backgroundColor: function (context) {
+                                return context.dataset.backgroundColor[context.dataIndex];
+                            },
+                            borderColor: '#000',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            padding: 5
+                        }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+
+            // 压力分布柱状图 - 增强版（更多区域）
+            const pressureDistCtx = document.getElementById('pressureDistributionChart').getContext('2d');
+            new Chart(pressureDistCtx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        '前掌内侧', '前掌外侧',
+                        '中掌内侧', '中掌外侧',
+                        '后跟内侧', '后跟外侧'
+                    ],
+                    datasets: [{
+                        label: '左脚压力占比(%)',
+                        data: [18, 32, 12, 13, 8, 9],
+                        backgroundColor: 'rgba(0, 240, 255, 0.6)',
+                        borderColor: 'rgba(0, 240, 255, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }, {
+                        label: '右脚压力占比(%)',
+                        data: [20, 30, 10, 15, 7, 8],
+                        backgroundColor: 'rgba(157, 78, 221, 0.6)',
+                        borderColor: 'rgba(157, 78, 221, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#e2e8f0',
+                                font: { size: 14 },
+                                padding: 20
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '脚掌压力区域分布',
+                            color: '#00f0ff',
+                            font: { size: 18, weight: 'bold' },
+                            padding: { top: 10, bottom: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#00f0ff',
+                            bodyColor: '#e2e8f0',
+                            borderColor: '#9d4edd',
+                            borderWidth: 1,
+                            padding: 15,
+                            callbacks: {
+                                label: function (context) {
+                                    return `${context.dataset.label}: ${context.raw}%`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            color: '#fff',
+                            font: { size: 12 },
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: function (value) {
+                                return `${value}%`;
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 40,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#e2e8f0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#e2e8f0',
+                                rotation: 30,
+                                align: 'right'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+
+            // 手臂摆动角度折线图 - 科技感样式增强
+            const armAngleCtx = document.getElementById('armAngleChart').getContext('2d');
+            new Chart(armAngleCtx, {
+                type: 'line',
+                data: {
+                    labels: ['0min', '0.01min', '0.03min', '0.05min', '0.07min', '0.10min', '0.13min'],
+                    datasets: [{
+                        label: '左臂摆动稳定性(%)',
+                        data: [25, 28, 30, 27, 29, 26, 28],
+                        borderColor: 'rgba(0, 240, 255, 1)',
+                        backgroundColor: 'rgba(0, 240, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(0, 240, 255, 1)',
+                        pointBorderColor: '#000',
+                        pointBorderWidth: 1,
+                        pointRadius: 5,
+                        pointHoverRadius: 8
+                    }, {
+                        label: '右臂摆动稳定性(%)',
+                        data: [29, 32, 30, 33, 31, 30, 31],
+                        borderColor: 'rgba(255, 42, 109, 1)',
+                        backgroundColor: 'rgba(255, 42, 109, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(255, 42, 109, 1)',
+                        pointBorderColor: '#000',
+                        pointBorderWidth: 1,
+                        pointRadius: 5,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#e2e8f0',
+                                font: { size: 14 },
+                                padding: 20
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '手臂摆动稳定性变化',
+                            color: '#00f0ff',
+                            font: { size: 18, weight: 'bold' },
+                            padding: { top: 10, bottom: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#00f0ff',
+                            bodyColor: '#e2e8f0',
+                            borderColor: '#9d4edd',
+                            borderWidth: 1,
+                            padding: 15
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 20,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#e2e8f0'
+                            },
+                            title: { display: true, text: '稳定性%', color: '#e2e8f0' }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#e2e8f0'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+
+            // 手臂对称性雷达图 - 科技感样式增强
+            const armSymmetryCtx = document.getElementById('armSymmetryChart').getContext('2d');
+            new Chart(armSymmetryCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['摆动幅度', '摆动频率', '摆动平面', '相位同步性', '角速度'],
+                    datasets: [{
+                        label: '左臂',
+                        data: [85, 90, 88, 92, 86],
+                        backgroundColor: 'rgba(0, 240, 255, 0.2)',
+                        borderColor: 'rgba(0, 240, 255, 1)',
+                        pointBackgroundColor: 'rgba(0, 240, 255, 1)',
+                        pointBorderColor: '#000',
+                        pointBorderWidth: 1,
+                        pointRadius: 5,
+                        borderWidth: 2
+                    }, {
+                        label: '右臂',
+                        data: [92, 90, 85, 92, 89],
+                        backgroundColor: 'rgba(255, 42, 109, 0.2)',
+                        borderColor: 'rgba(255, 42, 109, 1)',
+                        pointBackgroundColor: 'rgba(255, 42, 109, 1)',
+                        pointBorderColor: '#000',
+                        pointBorderWidth: 1,
+                        pointRadius: 5,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#e2e8f0',
+                                font: { size: 14 },
+                                padding: 20
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '手臂对称性分析',
+                            color: '#00f0ff',
+                            font: { size: 18, weight: 'bold' },
+                            padding: { top: 10, bottom: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#00f0ff',
+                            bodyColor: '#e2e8f0',
+                            borderColor: '#9d4edd',
+                            borderWidth: 1,
+                            padding: 15
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            pointLabels: {
+                                color: '#e2e8f0',
+                                font: { size: 14 }
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                backdropColor: 'transparent',
+                                stepSize: 20
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
