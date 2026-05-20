@@ -15,10 +15,10 @@ if errorlevel 1 (
 )
 
 echo [1/2] Checking dependencies...
-python -c "import bleak, websockets" >nul 2>&1
+python -c "import bleak, websockets, openai" >nul 2>&1
 if errorlevel 1 (
     echo Installing dependencies...
-    python -m pip install bleak websockets
+    python -m pip install -r requirements.txt
     if errorlevel 1 (
         echo [ERROR] Failed to install dependencies. Check your network.
         pause
