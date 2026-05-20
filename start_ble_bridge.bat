@@ -34,6 +34,10 @@ echo.
 echo Press Ctrl+C to stop.
 echo Frontend will open in your browser.
 echo.
+
+REM DeepSeek AI Chat API Key
+set DEEPSEEK_API_KEY=sk-e1e178ed79244558b5e8f4da7f166cae
+
 python -u ble_bridge_launcher.py
 
 pause

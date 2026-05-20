@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import os
 import sys
 import threading
 import time
@@ -8,9 +9,14 @@ import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse
 
 import websockets
 from bleak import BleakClient, BleakScanner
+
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+DEEPSEEK_MODEL = "deepseek-chat"
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -33,9 +39,82 @@ web_clients = set()
 latest_packets = {}
 
 
-class QuietHTTPRequestHandler(SimpleHTTPRequestHandler):
+class ChatHTTPRequestHandler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         return
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/chat":
+            self._handle_chat()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def _handle_chat(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length) if length else b""
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            self._send_json(400, {"error": "Invalid JSON"})
+            return
+
+        messages = data.get("messages", [])
+        if not messages:
+            self._send_json(400, {"error": "messages required"})
+            return
+
+        if not DEEPSEEK_API_KEY:
+            self._send_json(200, {
+                "reply": "AI 聊天未配置。\n\n请设置环境变量 DEEPSEEK_API_KEY，\n"
+                         "前往 https://platform.deepseek.com/api_keys 申请。\n\n"
+                         "Windows: set DEEPSEEK_API_KEY=sk-xxx\n"
+                         "然后重启桥接器。"
+            })
+            return
+
+        # Prepend system prompt
+        system_prompt = (
+            "你是一个专业的跑步运动分析教练，擅长分析运动生物力学数据。"
+            "用户会提供跑步时的关节角度、足部压力分布、步频、对称性等数据。"
+            "请基于数据给出具体、可操作的改进建议。用中文回复，"
+            "保持建议简洁但专业，必要时分点列出。"
+        )
+        full_messages = [{"role": "system", "content": system_prompt}] + messages
+
+        try:
+            import openai
+            client = openai.OpenAI(
+                api_key=DEEPSEEK_API_KEY,
+                base_url=DEEPSEEK_BASE_URL,
+            )
+            resp = client.chat.completions.create(
+                model=DEEPSEEK_MODEL,
+                messages=full_messages,
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            reply = resp.choices[0].message.content
+            self._send_json(200, {"reply": reply})
+        except Exception as e:
+            self._send_json(500, {"error": f"AI 请求失败: {str(e)}"})
+
+    def _send_json(self, status, data):
+        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
 
 
 class ReusableThreadingHTTPServer(ThreadingHTTPServer):
@@ -43,7 +122,7 @@ class ReusableThreadingHTTPServer(ThreadingHTTPServer):
 
 
 def start_http_server(host, port):
-    handler = partial(QuietHTTPRequestHandler, directory=str(PROJECT_ROOT))
+    handler = partial(ChatHTTPRequestHandler, directory=str(PROJECT_ROOT))
     server = ReusableThreadingHTTPServer((host, port), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
