@@ -375,11 +375,11 @@ function connectBridgeWebSocket() {
 // 添加日志到控制台
 function addToConsole(message, type = 'info') {
     const timestamp = new Date().toLocaleTimeString();
-    const colorClass = type === 'error' ? 'text-red-400' :
-        type === 'success' ? 'text-green-400' :
-            type === 'warning' ? 'text-yellow-400' : 'text-white';
+    const colorMap = { error: '#ff6b6b', success: '#00ff88', warning: '#ffb800', info: '#e8ecf2' };
+    const color = colorMap[type] || '#e8ecf2';
     const line = document.createElement('p');
-    line.className = `terminal-line ${colorClass}`;
+    line.className = 'terminal-line';
+    line.style.color = color;
     line.innerHTML = `[${timestamp}] ${message}`;
     consoleOutput.appendChild(line);
     consoleOutput.scrollTop = consoleOutput.scrollHeight;
@@ -422,9 +422,9 @@ function updateSystemStatus() {
     document.getElementById('memory-usage-bar').style.width = `${memoryUsage}%`;
     document.getElementById('memory-usage-text').textContent = `${memoryUsage}%`;
     // 更新数据处理速度
-    document.getElementById('data-processing-rate').innerHTML = `${dataRate} <span class="text-sm font-normal text-gray-500">样本/秒</span>`;
+    document.getElementById('data-processing-rate').innerHTML = `${dataRate} <span class="text-sm font-normal text-info">样本/秒</span>`;
     // 更新连接设备数
-    document.getElementById('connected-devices').innerHTML = `${devices} <span class="text-sm font-normal text-gray-500">台设备</span>`;
+    document.getElementById('connected-devices').innerHTML = `${devices} <span class="text-sm font-normal text-info">台设备</span>`;
     // 更新最后更新时间
     const now = new Date();
     document.getElementById('last-updated').textContent = `最后更新: ${now.toLocaleTimeString()}`;
@@ -477,17 +477,19 @@ function addRandomActivity() {
     const message = activityType.messages[Math.floor(Math.random() * activityType.messages.length)];
     const now = new Date();
     const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const colorMap = { blue: '#00e5ff', green: '#00ff88', yellow: '#ffb800' };
+    const dotColor = colorMap[activityType.color] || '#8b95a8';
     const activityElement = document.createElement('div');
     activityElement.className = 'flex items-start';
     activityElement.innerHTML = `
         <div class="flex-shrink-0 mt-0.5">
-            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-${activityType.color}-100 text-${activityType.color}-600">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full" style="background:${dotColor}15;color:${dotColor}">
                 <i class="fa fa-${activityType.icon} text-xs"></i>
             </span>
         </div>
         <div class="ml-3">
-            <p class="text-sm text-gray-600">${message}</p>
-            <p class="text-xs text-gray-400">${timeString}</p>
+            <p class="text-sm text-info">${message}</p>
+            <p class="text-xs text-muted">${timeString}</p>
         </div>
     `;
     const container = document.getElementById('recent-activities');

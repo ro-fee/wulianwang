@@ -1,123 +1,167 @@
+/* ============================================================
+   personalInformation.css — User Profile & Settings
+   ============================================================ */
+
 :root {
-    --primary: #3b82f6;
-    --accent: #8b5cf6;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --error: #ef4444;
+    --primary: #00e5ff;
+    --accent: #ff6b6b;
+    --success: #00ff88;
+    --warning: #ffb800;
+    --error: #ff6b6b;
     --bmi-low: #3b82f6;
-    --bmi-normal: #10b981;
-    --bmi-overweight: #f59e0b;
-    --bmi-obese: #ef4444;
+    --bmi-normal: #00ff88;
+    --bmi-overweight: #ffb800;
+    --bmi-obese: #ff6b6b;
 }
-body, .text-gray-900, .text-gray-800, .user-card,
-.bg-white, .text-blue-100, .goal-card, .text-gray-600, .text-gray-700, .text-sm, .font-bold, .font-medium {
-    color: #222 !important;
+
+/* --- Base overrides (dark theme active by default) --- */
+body, .text-gray-900, .text-gray-800, .bg-white,
+.text-blue-100, .text-gray-600, .text-gray-700, .text-sm {
+    color: var(--text-primary) !important;
     background-color: transparent !important;
 }
-.bg-white { background: #fff !important; }
+.bg-white { background: #0f141f !important; }
+
 [data-theme="dark"] body,
 [data-theme="dark"] .bg-white,
-[data-theme="dark"] .user-card,
-[data-theme="dark"] .goal-card,
 [data-theme="dark"] .text-gray-900,
 [data-theme="dark"] .text-gray-700,
 [data-theme="dark"] .text-gray-600,
-[data-theme="dark"] .text-gray-500,
-[data-theme="dark"] .text-sm,
-[data-theme="dark"] .font-bold,
-[data-theme="dark"] .font-medium
-{
-    color: #f3f4f6 !important;
-    background: #222 !important;
-}
-[data-theme="dark"] .bg-white {
-    background: #1f2937 !important;
-}
+[data-theme="dark"] .text-gray-500 { color: #e8ecf2 !important; background: #0f141f !important; }
+
+[data-theme="dark"] .bg-white { background: #0f141f !important; }
+
+/* --- User Profile Card --- */
 .user-card {
-    background: linear-gradient(135deg, #eef2ff 0%, #c7d2fe 100%) !important;
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.08) 0%, rgba(0, 255, 136, 0.05) 100%) !important;
+    border: 1px solid rgba(0, 229, 255, 0.12) !important;
 }
 [data-theme="dark"] .user-card {
-    background: linear-gradient(135deg, #3b3e66 0%, #4f46e5 100%) !important;
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.1) 0%, rgba(0, 255, 136, 0.06) 100%) !important;
 }
+
+/* --- Sidebar --- */
 .sidebar {
+    background: #0f141f !important;
     transform: translateX(-100%);
-    transition: transform 0.3s;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.sidebar.open { transform: translateX(0);}
+.sidebar.open { transform: translateX(0); }
+
+/* --- Tab Bar --- */
 .tab-bar {
-    background: rgba(255,255,255,0.95);
-    color: #222;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.07);
-    backdrop-filter: blur(10px);
+    background: rgba(15, 20, 31, 0.95);
+    color: #e8ecf2;
+    box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 [data-theme="dark"] .tab-bar {
-    background: rgba(18,22,34,0.98);
-    color: #e5e5e5;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.20);
+    background: rgba(15, 20, 31, 0.98);
+    color: #e8ecf2;
+    box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.5);
 }
-.tab-item.active, .tab-item.active .tab-icon { color: var(--primary) !important;}
-.slide-up {animation: slideUp 0.3s;}
-@keyframes slideUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
-.custom-scrollbar::-webkit-scrollbar {width:6px;}
-.custom-scrollbar::-webkit-scrollbar-thumb {background:#c1c1c1;}
-[data-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb {background:#444;}
-.cropper-modal { background: rgba(0,0,0,0.85);}
-.cropper-container { max-height: 400px;}
+
+.tab-item.active, .tab-item.active .tab-icon { color: var(--primary) !important; }
+
+/* --- Animations --- */
+.slide-up { animation: fadeInUp 0.4s var(--ease-out-expo); }
+
+/* --- Scrollbar --- */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+[data-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
+
+/* --- Avatar Modal --- */
+.cropper-modal { background: rgba(0, 0, 0, 0.85); }
+.cropper-container { max-height: 400px; }
+
+/* --- Notifications --- */
 .notification {
-    position: fixed; top:1rem; left:50%; transform:translateX(-50%); z-index:9999;
-    padding:.5rem 1.2rem; border-radius:.6rem; font-weight:600;
-    animation: fadeInOut 2s;
+    position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 9999;
+    padding: 0.6rem 1.4rem; border-radius: 0.6rem; font-weight: 600;
+    font-family: var(--font-display); letter-spacing: 0.03em;
+    animation: fadeInOut 2.2s;
 }
 @keyframes fadeInOut {
-    0%,100%{opacity:0; transform:translateY(-20px);}
-    10%,90%{opacity:1; transform:translateY(0);}
+    0%, 100% { opacity: 0; transform: translateY(-20px); }
+    10%, 90% { opacity: 1; transform: translateY(0); }
 }
-.goal-card { transition: box-shadow .3s;}
-.goal-card:hover {box-shadow:0 6px 22px -4px rgba(59,130,246,0.09);}
-.goal-progress { height:8px; border-radius:4px;}
+
+/* --- Goal Cards --- */
+.goal-card { transition: box-shadow 0.3s var(--ease-out-expo), border-color 0.3s var(--ease-out-expo); }
+.goal-card:hover {
+    box-shadow: 0 6px 24px rgba(0, 229, 255, 0.08);
+    border-color: rgba(0, 229, 255, 0.2);
+}
+.goal-progress { height: 8px; border-radius: 4px; }
+
+/* --- BMI Indicator --- */
 .bmi-indicator {
     position: relative;
     height: 8px;
     border-radius: 4px;
     overflow: hidden;
     background: linear-gradient(to right,
-        var(--bmi-low) 0%,
-        var(--bmi-low) 18.5%,
-        var(--bmi-normal) 18.5%,
-        var(--bmi-normal) 24%,
-        var(--bmi-overweight) 24%,
-        var(--bmi-overweight) 28%,
-        var(--bmi-obese) 28%,
-        var(--bmi-obese) 100%);
+        var(--bmi-low) 0%, var(--bmi-low) 18.5%,
+        var(--bmi-normal) 18.5%, var(--bmi-normal) 24%,
+        var(--bmi-overweight) 24%, var(--bmi-overweight) 28%,
+        var(--bmi-obese) 28%, var(--bmi-obese) 100%);
 }
 .bmi-marker {
     position: absolute;
-    top:-4px;
-    width:3px;
-    height:16px;
+    top: -4px;
+    width: 3px;
+    height: 16px;
     background: #fff !important;
-    border-radius:2px;
-    box-shadow:0 0 3px rgba(0,0,0,0.25);
-    transform:translateX(-50%);
+    border-radius: 2px;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+    transform: translateX(-50%);
 }
-.chart-container {height:250px;}
-.text-error { color: var(--error) !important;}
-.border-error { border-color: var(--error) !important;}
-/* 表单激活特效 */
+
+/* --- Chart --- */
+.chart-container { height: 280px; }
+
+.text-error { color: var(--error) !important; }
+.border-error { border-color: var(--error) !important; }
+
+/* --- Form Inputs (extend common.css) --- */
 .form-input:focus {
-    box-shadow: 0 0 0 2px rgba(59,130,246,0.20);
+    box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
     outline: none;
     border-color: var(--primary);
 }
 [data-theme="dark"] .form-input:focus {
-    box-shadow: 0 0 0 2px rgba(96,165,250,0.30);
+    box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2);
 }
-input,select {
-    background: #fff;
+
+input, select {
+    background: rgba(10, 14, 22, 0.7);
+    color: #e8ecf2;
+    border-color: rgba(255, 255, 255, 0.08);
 }
 [data-theme="dark"] input, [data-theme="dark"] select {
-    background:#222 !important;
-    color:#f3f4f6 !important;
+    background: rgba(10, 14, 22, 0.7) !important;
+    color: #e8ecf2 !important;
 }
-label {color: #222;}
-[data-theme="dark"] label {color: #f3f4f6;}
+label { color: #8b95a8; }
+[data-theme="dark"] label { color: #8b95a8; }
+
+/* --- Section Header --- */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.section-header h3 { margin: 0; }
+.icon-box {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; font-size: 1rem;
+}
+.icon-box.cyan { background: rgba(0, 229, 255, 0.12); color: #00e5ff; }
+.icon-box.coral { background: rgba(255, 107, 107, 0.12); color: #ff6b6b; }
+.icon-box.volt { background: rgba(0, 255, 136, 0.12); color: #00ff88; }
