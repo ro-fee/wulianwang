@@ -1,21 +1,9 @@
 /**
- * AI Chat — DeepSeek-powered exercise coach
+ * AI Chat — DeepSeek-powered exercise coach (inline section)
  */
 (function () {
-  const panel = document.getElementById('ai-chat-panel');
-  const overlay = document.getElementById('ai-chat-overlay');
-  const btn = document.getElementById('ai-chat-btn');
   const messagesEl = document.getElementById('ai-chat-messages');
   const input = document.getElementById('ai-chat-input');
-  let isOpen = false;
-
-  window.toggleChat = function () {
-    isOpen = !isOpen;
-    panel.style.right = isOpen ? '0' : '-420px';
-    overlay.style.display = isOpen ? 'block' : 'none';
-    btn.style.display = isOpen ? 'none' : 'flex';
-    if (isOpen) setTimeout(function () { input.focus(); }, 400);
-  };
 
   function addMessage(role, text) {
     const isAI = role === 'ai';
