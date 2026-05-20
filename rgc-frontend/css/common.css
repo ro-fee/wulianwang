@@ -425,6 +425,30 @@ p { margin: 0 0 0.8em; color: var(--text-secondary); }
 .reveal-d6 { animation-delay: 0.3s; }
 
 /* ============================================================
+   VIEW TRANSITIONS — smooth crossfade between pages
+   ============================================================ */
+
+/* Old page fades out + slight shrink */
+::view-transition-old(root) {
+  animation: vt-fade-out 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* New page slides up firmly */
+::view-transition-new(root) {
+  animation: vt-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes vt-fade-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.97); }
+}
+
+@keyframes vt-slide-in {
+  from { opacity: 0; transform: translateY(36px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
    CYBERPUNK EFFECTS
    ============================================================ */
 
