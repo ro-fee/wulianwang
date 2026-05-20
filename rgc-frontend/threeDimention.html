@@ -18,6 +18,9 @@
   <link rel="stylesheet" href="css/threeDimention.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="js/chart-enhance.js"></script>
 
 </head>
 
@@ -27,6 +30,37 @@
   <!-- 新增复位按钮 -->
   <div style="position: absolute; top: 20px; width: 100%; text-align: center; z-index: 2;">
     <button id="resetDeviceBtn" class="reset-device-btn">复位设备</button>
+  </div>
+
+  <!-- 关节信息浮层 -->
+  <div id="joint-popup" style="
+    position:fixed;z-index:200;pointer-events:none;
+    opacity:0;transform:translate(-50%,-120%);
+    transition:opacity .25s ease,transform .25s cubic-bezier(.34,1.56,.64,1);
+    background:rgba(8,12,20,.94);border:1px solid rgba(0,229,255,.35);
+    border-radius:12px;padding:16px 20px;min-width:200px;
+    box-shadow:0 0 30px rgba(0,229,255,.15),0 8px 32px rgba(0,0,0,.6);
+    font-family: 'Rajdhani','PingFang SC',sans-serif;
+  ">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;border-bottom:1px solid rgba(0,229,255,.15);padding-bottom:10px">
+      <div style="width:10px;height:10px;border-radius:50%;background:#00e5ff;box-shadow:0 0 10px #00e5ff"></div>
+      <span id="jp-title" style="color:#00e5ff;font-size:1.1rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase">关节名称</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;justify-content:space-between;font-size:.9rem">
+        <span style="color:#8b95a8">Roll 滚转</span>
+        <span id="jp-roll" style="color:#FF6384;font-family:'JetBrains Mono',monospace">--°</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.9rem">
+        <span style="color:#8b95a8">Pitch 俯仰</span>
+        <span id="jp-pitch" style="color:#36A2EB;font-family:'JetBrains Mono',monospace">--°</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.9rem">
+        <span style="color:#8b95a8">Yaw 偏航</span>
+        <span id="jp-yaw" style="color:#9966FF;font-family:'JetBrains Mono',monospace">--°</span>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);font-size:.7rem;color:#586274;text-align:center;letter-spacing:.08em">双击空白处关闭</div>
   </div>
 
   <!-- 左侧抽屉打开按钮 -->
@@ -387,14 +421,40 @@
                   usePointStyle: true,
                   padding: 10,
                   pointStyle: 'circle',
-                  pointRadius: 5, // 修正：从0.2改为5，确保可见
+                  pointRadius: 5,
                   font: { size: 13 }
                 },
                 position: 'top',
                 align: 'center',
                 maxHeight: 30
               },
-              tooltip: { /* 保留原有配置 */ }
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: 'rgba(8,12,20,0.92)',
+                titleColor: '#00e5ff',
+                bodyColor: '#e8ecf2',
+                borderColor: 'rgba(0,229,255,0.3)',
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 6,
+                titleFont: { family: 'Rajdhani,PingFang SC,sans-serif', size: 13, weight: '600' },
+                bodyFont: { family: 'JetBrains Mono,Consolas,monospace', size: 11 }
+              },
+              zoom: {
+                pan: { enabled: true, mode: 'x' },
+                zoom: {
+                  wheel: { enabled: true },
+                  pinch: { enabled: true },
+                  drag: {
+                    enabled: true,
+                    backgroundColor: 'rgba(0,229,255,0.08)',
+                    borderColor: 'rgba(0,229,255,0.3)',
+                  },
+                  mode: 'x',
+                },
+                limits: { x: { minRange: 10 } },
+              }
             }
           }
         });
@@ -1388,9 +1448,206 @@
     }
 
     // 动画循环（每帧更新关节，参考第一份代码的持续渲染）
+    // ── 3D Joint Hover + Double-Click Detail ──
+    const mouseNDC = new THREE.Vector2();
+    let hoveredBoneName = null;
+    const boneWorldPos = {};
+    const BONE_NAMES = ['mixamorigLeftArm','mixamorigLeftForeArm','mixamorigRightArm','mixamorigRightForeArm'];
+    const BONE_INFO = {
+      mixamorigLeftArm:     { key: 'left_upper',  label: '左大臂' },
+      mixamorigLeftForeArm: { key: 'left_lower',  label: '左小臂' },
+      mixamorigRightArm:    { key: 'right_upper', label: '右大臂' },
+      mixamorigRightForeArm:{ key: 'right_lower', label: '右小臂' },
+    };
+    const HOVER_THRESHOLD = 60;
+    const DOT_SIZE = 0.008; // model ~0.018 tall after 0.01 scale, dot ~40% model height
+
+    // Joint markers added directly to scene (NOT to bones — avoids 0.01 scale inheritance)
+    const jointMarkers = {};
+    const jointGlows = {};
+    let markersAdded = false;
+
+    function createMarkers() {
+      if (markersAdded || !model) return;
+      markersAdded = true;
+      BONE_NAMES.forEach(function (name) {
+        // Inner dot
+        var geo = new THREE.SphereGeometry(DOT_SIZE, 16, 16);
+        var mat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.8, depthTest: false, depthWrite: false });
+        var dot = new THREE.Mesh(geo, mat);
+        dot.renderOrder = 999;
+        scene.add(dot);
+        jointMarkers[name] = dot;
+
+        // Outer glow
+        var gGeo = new THREE.SphereGeometry(DOT_SIZE * 2.5, 16, 16);
+        var gMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.25, depthTest: false, depthWrite: false });
+        var glow = new THREE.Mesh(gGeo, gMat);
+        glow.renderOrder = 998;
+        scene.add(glow);
+        jointGlows[name] = glow;
+      });
+      console.log('[3D] 关节标记已创建 (直接加入场景，避免缩放继承)');
+    }
+
+    window.addEventListener('mousemove', function (e) {
+      mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    // ── Joint info popup elements ──
+    const popup = document.getElementById('joint-popup');
+    const jpTitle = document.getElementById('jp-title');
+    const jpRoll = document.getElementById('jp-roll');
+    const jpPitch = document.getElementById('jp-pitch');
+    const jpYaw = document.getElementById('jp-yaw');
+    let popupJoint = null;
+    let popupTimeout = null;
+
+    function showPopup(name, sx, sy) {
+      var info = BONE_INFO[name];
+      jpTitle.textContent = info.label;
+      // Read current angles from global variables
+      var angles = { x: '--', y: '--', z: '--' };
+      if (name === 'mixamorigLeftArm')       angles = leftUpperAngles;
+      if (name === 'mixamorigLeftForeArm')    angles = leftLowerAngles;
+      if (name === 'mixamorigRightArm')       angles = rightUpperAngles;
+      if (name === 'mixamorigRightForeArm')  angles = rightLowerAngles;
+      jpRoll.textContent  = (angles.x || '--') + '°';
+      jpPitch.textContent = (angles.y || '--') + '°';
+      jpYaw.textContent   = (angles.z || '--') + '°';
+      popup.style.left = sx + 'px';
+      popup.style.top = sy + 'px';
+      popup.style.opacity = '1';
+      popup.style.transform = 'translate(-50%, -120%) scale(1)';
+      popup.style.pointerEvents = 'auto';
+      popupJoint = name;
+      clearTimeout(popupTimeout);
+      popupTimeout = setTimeout(hidePopup, 5000);
+    }
+
+    function hidePopup() {
+      popup.style.opacity = '0';
+      popup.style.transform = 'translate(-50%, -120%) scale(.9)';
+      popup.style.pointerEvents = 'none';
+      popupJoint = null;
+    }
+
+    // Close popup when clicking empty space (not on a joint)
+    window.addEventListener('dblclick', function (e) {
+      if (!model || !markersAdded) return;
+      var closest = null;
+      var closestDist = HOVER_THRESHOLD;
+      var mx = e.clientX, my = e.clientY;
+      for (var i = 0; i < BONE_NAMES.length; i++) {
+        var name = BONE_NAMES[i];
+        var wp = boneWorldPos[name];
+        if (!wp) continue;
+        var sp = wp.clone().project(camera);
+        if (sp.z > 1) continue;
+        var sx = (sp.x * 0.5 + 0.5) * window.innerWidth;
+        var sy = (-sp.y * 0.5 + 0.5) * window.innerHeight;
+        var dist = Math.sqrt((mx - sx) * (mx - sx) + (my - sy) * (my - sy));
+        if (dist < closestDist) { closestDist = dist; closest = name; }
+      }
+      if (closest) {
+        var wp = boneWorldPos[closest].clone().project(camera);
+        var sx = (wp.x * 0.5 + 0.5) * window.innerWidth;
+        var sy = (-wp.y * 0.5 + 0.5) * window.innerHeight;
+        showPopup(closest, sx, sy);
+        // Also flash the chart
+        var info = BONE_INFO[closest];
+        var targetChart = chartObjs[info.key];
+        if (targetChart && targetChart.canvas) {
+          targetChart.canvas.style.transition = 'box-shadow 0.3s ease';
+          targetChart.canvas.style.boxShadow = '0 0 24px rgba(0,229,255,0.7)';
+          setTimeout(function () { targetChart.canvas.style.boxShadow = ''; }, 1500);
+        }
+        console.log('[3D] 双击关节:', closest);
+      } else {
+        // Clicked empty space — close popup
+        hidePopup();
+      }
+    });
+
+    // Click to close
+    window.addEventListener('click', function (e) {
+      if (popupJoint && !e.target.closest('#joint-popup')) {
+        // Check if click was not on a joint
+        var mx = e.clientX, my = e.clientY;
+        var onJoint = false;
+        for (var i = 0; i < BONE_NAMES.length; i++) {
+          var wp = boneWorldPos[BONE_NAMES[i]];
+          if (!wp) continue;
+          var sp = wp.clone().project(camera);
+          if (sp.z > 1) continue;
+          var sx = (sp.x * 0.5 + 0.5) * window.innerWidth;
+          var sy = (-sp.y * 0.5 + 0.5) * window.innerHeight;
+          if (Math.sqrt((mx - sx)*(mx - sx) + (my - sy)*(my - sy)) < HOVER_THRESHOLD) { onJoint = true; break; }
+        }
+        if (!onJoint) hidePopup();
+      }
+    });
+
+    function updateJointHover() {
+      if (!model) return;
+      createMarkers();
+
+      // Update world positions
+      model.traverse(function (child) {
+        if (BONE_NAMES.includes(child.name)) {
+          var wp = new THREE.Vector3();
+          child.getWorldPosition(wp);
+          boneWorldPos[child.name] = wp;
+
+          // Move scene markers to joint world positions
+          var dot = jointMarkers[child.name];
+          var glow = jointGlows[child.name];
+          if (dot) dot.position.copy(wp);
+          if (glow) glow.position.copy(wp);
+        }
+      });
+
+      // Find closest to mouse
+      var closestName = null;
+      var closestDist = HOVER_THRESHOLD;
+      var mx = (mouseNDC.x * 0.5 + 0.5) * window.innerWidth;
+      var my = (-mouseNDC.y * 0.5 + 0.5) * window.innerHeight;
+
+      for (var i = 0; i < BONE_NAMES.length; i++) {
+        var name = BONE_NAMES[i];
+        var wp = boneWorldPos[name];
+        if (!wp) continue;
+        var sp = wp.clone().project(camera);
+        if (sp.z > 1) continue;
+        var sx = (sp.x * 0.5 + 0.5) * window.innerWidth;
+        var sy = (-sp.y * 0.5 + 0.5) * window.innerHeight;
+        var dist = Math.sqrt((mx - sx) * (mx - sx) + (my - sy) * (my - sy));
+        if (dist < closestDist) { closestDist = dist; closestName = name; }
+      }
+
+      if (closestName !== hoveredBoneName) {
+        if (hoveredBoneName && jointMarkers[hoveredBoneName]) {
+          jointMarkers[hoveredBoneName].scale.set(1, 1, 1);
+          jointMarkers[hoveredBoneName].material.opacity = 0.8;
+          if (jointGlows[hoveredBoneName]) jointGlows[hoveredBoneName].scale.set(1, 1, 1);
+        }
+        if (closestName && jointMarkers[closestName]) {
+          jointMarkers[closestName].scale.set(2.5, 2.5, 2.5);
+          jointMarkers[closestName].material.opacity = 1;
+          if (jointGlows[closestName]) jointGlows[closestName].scale.set(2, 2, 2);
+          document.body.style.cursor = 'pointer';
+        } else {
+          document.body.style.cursor = '';
+        }
+        hoveredBoneName = closestName;
+      }
+    }
+
     function animate() {
       requestAnimationFrame(animate);
-      updateJoints(); // 每帧执行平滑过渡
+      updateJoints();
+      updateJointHover();
       controls.update();
       renderer.render(scene, camera);
     }

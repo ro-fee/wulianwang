@@ -122,13 +122,38 @@ JOINTS.forEach(joint => {
                 tooltip: {
                     mode: 'index',
                     intersect: false,
-                    backgroundColor: 'rgba(26, 32, 44, 0.9)',
-                    titleColor: '#CBD5E0',
-                    bodyColor: '#E2E8F0',
-                    borderColor: 'rgba(74, 85, 104, 0.5)',
+                    backgroundColor: 'rgba(8,12,20,0.92)',
+                    titleColor: '#00e5ff',
+                    bodyColor: '#e8ecf2',
+                    borderColor: 'rgba(0,229,255,0.3)',
                     borderWidth: 1,
                     padding: 12,
-                    usePointStyle: true
+                    cornerRadius: 6,
+                    titleFont: { family: 'Rajdhani,PingFang SC,sans-serif', size: 13, weight: '600' },
+                    bodyFont: { family: 'JetBrains Mono,Consolas,monospace', size: 11 }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x',
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true,
+                        },
+                        pinch: {
+                            enabled: true,
+                        },
+                        drag: {
+                            enabled: true,
+                            backgroundColor: 'rgba(0,229,255,0.08)',
+                            borderColor: 'rgba(0,229,255,0.3)',
+                        },
+                        mode: 'x',
+                    },
+                    limits: {
+                        x: { minRange: 10 },
+                    },
                 }
             },
             interaction: {

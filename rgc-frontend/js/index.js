@@ -134,7 +134,30 @@ function initArmCharts() {
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    backgroundColor: 'rgba(8,12,20,0.92)',
+                    titleColor: '#00e5ff',
+                    bodyColor: '#e8ecf2',
+                    borderColor: 'rgba(0,229,255,0.3)',
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 6,
+                    titleFont: { family: 'Rajdhani,PingFang SC,sans-serif', size: 12, weight: '600' },
+                    bodyFont: { family: 'JetBrains Mono,Consolas,monospace', size: 10 }
+                },
+                zoom: {
+                    pan: { enabled: true, mode: 'x' },
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        drag: {
+                            enabled: true,
+                            backgroundColor: 'rgba(0,229,255,0.08)',
+                            borderColor: 'rgba(0,229,255,0.3)',
+                        },
+                        mode: 'x',
+                    },
+                    limits: { x: { minRange: 10 } },
                 }
             },
             interaction: {
@@ -267,7 +290,30 @@ function initArmCharts() {
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    backgroundColor: 'rgba(8,12,20,0.92)',
+                    titleColor: '#00e5ff',
+                    bodyColor: '#e8ecf2',
+                    borderColor: 'rgba(0,229,255,0.3)',
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 6,
+                    titleFont: { family: 'Rajdhani,PingFang SC,sans-serif', size: 12, weight: '600' },
+                    bodyFont: { family: 'JetBrains Mono,Consolas,monospace', size: 10 }
+                },
+                zoom: {
+                    pan: { enabled: true, mode: 'x' },
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        drag: {
+                            enabled: true,
+                            backgroundColor: 'rgba(0,229,255,0.08)',
+                            borderColor: 'rgba(0,229,255,0.3)',
+                        },
+                        mode: 'x',
+                    },
+                    limits: { x: { minRange: 10 } },
                 }
             },
             interaction: {
