@@ -197,6 +197,23 @@
             </a>
         </div>
 
+        <!-- 压力艺术：足底压力曼陀罗 -->
+        <div class="glass-card p-6 mb-10 reveal-d4" style="border-top:2px solid #a78bfa">
+            <div class="flex items-center gap-3 mb-5 pb-4 border-b border-white/5">
+                <span style="width:12px;height:12px;border-radius:50%;background:#a78bfa;box-shadow:0 0 10px #a78bfa;animation:status-pulse 2s infinite"></span>
+                <h3 class="text-xl font-bold font-display tracking-wide text-light m-0">压力曼陀罗</h3>
+                <span class="badge" style="background:rgba(167,139,250,.12);color:#a78bfa">实时生成艺术</span>
+            </div>
+            <p class="text-info text-sm mb-4">足底 18 区压力映射为动态粒子，压力越大粒子越亮。左右脚数据驱动，每一次踏步都是一幅独特的画。</p>
+            <div id="pressure-mandala-wrap">
+                <canvas id="pressure-mandala-canvas"></canvas>
+                <div id="pressure-no-data">
+                    <i class="fa fa-circle-o-notch fa-spin" style="color:#a78bfa;font-size:1.5rem"></i>
+                    <p style="color:var(--text-muted);margin-top:10px">等待足底压力数据...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- System Status -->
         <div class="glass-card cyber-card p-6 mb-10 reveal-d4">
             <div class="section-header">
@@ -373,6 +390,7 @@
     </script>
 
     <script src="js/ai-chat.js"></script>
+    <script src="js/pressure-art.js"></script>
 </body>
 
 </html>
