@@ -620,17 +620,18 @@ function handleMessage(msg) {
   let heatData;
   let foot;
 
-  // 验证数据格式并提取有效部分（后18位）
-  if (msg.source === 'RIGHT' && Array.isArray(msg.data) && msg.data.length === 24) {
+  // 验证数据格式并提取有效部分（后18位压力)
+  // V1: 24元素(6角度+18压力), V2: 30元素(12角度+18压力)
+  if (msg.source === 'RIGHT' && Array.isArray(msg.data) && msg.data.length >= 24) {
     heatData = msg.data.slice(-18);
     foot = 'right';
-    rightDataCache = heatData; // 缓存右脚数据
-    drawHeat(heatData, 'right'); // 立即绘制右脚
-  } else if (msg.source === 'LEFT' && Array.isArray(msg.data) && msg.data.length === 24) {
+    rightDataCache = heatData;
+    drawHeat(heatData, 'right');
+  } else if (msg.source === 'LEFT' && Array.isArray(msg.data) && msg.data.length >= 24) {
     heatData = msg.data.slice(-18);
     foot = 'left';
-    leftDataCache = heatData; // 缓存左脚数据
-    drawHeat(heatData, 'left'); // 立即绘制左脚
+    leftDataCache = heatData;
+    drawHeat(heatData, 'left');
   }
 
   // 有效数据处理

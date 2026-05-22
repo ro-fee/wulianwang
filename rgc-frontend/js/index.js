@@ -325,27 +325,44 @@ function initArmCharts() {
     });
 }
 
-// 添加数据到图表
+// 添加手臂数据到图表
 function pushData(side, upperData, lowerData) {
     const chart = charts[side];
     if (!chart) return;
-    // 更新大臂数据
     for (let i = 0; i < 3; i++) {
         chart.data.datasets[i].data.push(upperData[i]);
     }
-    // 更新小臂数据
     for (let i = 0; i < 3; i++) {
         chart.data.datasets[i + 3].data.push(lowerData[i]);
     }
-    // 更新标签
     chart.data.labels.push(globalIndex);
-    // 保持数据长度
     if (chart.data.labels.length > MAX_POINTS) {
         chart.data.labels.shift();
         chart.data.datasets.forEach(ds => ds.data.shift());
     }
     chart.update('none');
 }
+
+// 添加腿部数据到图表 (V2)
+function pushLegData(side, upperLegData, lowerLegData) {
+    const chart = legCharts[side];
+    if (!chart) return;
+    for (let i = 0; i < 3; i++) {
+        chart.data.datasets[i].data.push(upperLegData[i]);
+    }
+    for (let i = 0; i < 3; i++) {
+        chart.data.datasets[i + 3].data.push(lowerLegData[i]);
+    }
+    chart.data.labels.push(globalIndex);
+    if (chart.data.labels.length > MAX_POINTS) {
+        chart.data.labels.shift();
+        chart.data.datasets.forEach(ds => ds.data.shift());
+    }
+    chart.update('none');
+}
+
+// 腿部图表存储
+const legCharts = {};
 
 // 本地BLE桥接WebSocket连接
 const BRIDGE_WS_URL = `ws://${window.location.hostname || '127.0.0.1'}:8765`;
@@ -368,7 +385,12 @@ function handleBridgeMessage(msg) {
         const side = msg.source === 'LEFT' ? 'left' : msg.source === 'RIGHT' ? 'right' : null;
         if (!side) return;
         globalIndex++;
+        // 手臂数据: indices 0-5
         pushData(side, msg.data.slice(0, 3), msg.data.slice(3, 6));
+        // 腿部数据: indices 6-11 (V2), 无数据时自动跳过
+        if (msg.data.length >= 12) {
+            pushLegData(side, msg.data.slice(6, 9), msg.data.slice(9, 12));
+        }
         return;
     }
 

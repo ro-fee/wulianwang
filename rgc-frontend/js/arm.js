@@ -3,7 +3,11 @@ const JOINTS = [
     { key: 'right_upper', label: '右大臂' },
     { key: 'right_lower', label: '右小臂' },
     { key: 'left_upper',  label: '左大臂' },
-    { key: 'left_lower',  label: '左小臂' }
+    { key: 'left_lower',  label: '左小臂' },
+    { key: 'right_upperLeg', label: '右大腿' },
+    { key: 'right_lowerLeg', label: '右小腿' },
+    { key: 'left_upperLeg',  label: '左大腿' },
+    { key: 'left_lowerLeg',  label: '左小腿' }
 ];
 // 单个关节欧拉角轴的标签
 const AXIS = ['X', 'Y', 'Z'];
@@ -264,18 +268,21 @@ function handleMessage(msg) {
   const isLeftData = msg.source === 'LEFT' && Array.isArray(msg.data);
 
   if (isRightData || isLeftData) {
-    const armData = msg.data.slice(0, 6); // 只取前6个数据
     const armType = isRightData ? 'right' : 'left';
 
-    // 处理大臂数据
-    const upperArmData = armData.slice(0, 3);
-    const upperArmKey = `${armType}_upper`;
-    pushData(upperArmKey, upperArmData);
+    // 手臂数据: indices 0-5 (V1=V2 一致)
+    const upperArmData = msg.data.slice(0, 3);
+    pushData(`${armType}_upper`, upperArmData);
+    const lowerArmData = msg.data.slice(3, 6);
+    pushData(`${armType}_lower`, lowerArmData);
 
-    // 处理小臂数据
-    const lowerArmData = armData.slice(3, 6);
-    const lowerArmKey = `${armType}_lower`;
-    pushData(lowerArmKey, lowerArmData);
+    // 腿部数据: indices 6-11 (V2 新增)
+    if (msg.data.length >= 12) {
+      const upperLegData = msg.data.slice(6, 9);
+      pushData(`${armType}_upperLeg`, upperLegData);
+      const lowerLegData = msg.data.slice(9, 12);
+      pushData(`${armType}_lowerLeg`, lowerLegData);
+    }
 
     // 更新帧计数和数据速率
     globalIndex++;

@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Arduino build
+rgc-backend/*/build/
+rgc-backend/*/.pio/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Env
+.env

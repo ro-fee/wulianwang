@@ -162,7 +162,8 @@ async def broadcast_packet(packet):
 
 
 def parse_rg_packet(data):
-    """解析ESP32发来的56字节RG二进制数据包，返回dict或None"""
+    """解析ESP32发来的RG二进制数据包(V1:56字节, V2:68字节)，返回dict或None"""
+    # 最小长度: V1=56字节
     if len(data) < 56:
         return None
     if data[0] != 0x52 or data[1] != 0x47:  # 'R', 'G'
@@ -170,26 +171,41 @@ def parse_rg_packet(data):
 
     version = data[2]
     payload_len = data[3]
-    if version != 1 or payload_len != 48:
+
+    # V1: 6 角度 + 18 压力 = 48 字节载荷, 56 字节总长
+    # V2: 12 角度 + 18 压力 = 60 字节载荷, 68 字节总长
+    if version == 1 and payload_len == 48 and len(data) >= 56:
+        angle_count = 6
+        pressure_offset = 18  # 6*2 + 4(header) + 2(seq) = 18
+        checksum_idx = 54
+    elif version == 2 and payload_len == 60 and len(data) >= 68:
+        angle_count = 12
+        pressure_offset = 30  # 12*2 + 4(header) + 2(seq) = 30
+        checksum_idx = 66
+    else:
         return None
 
-    # 16-bit checksum (sum of bytes 0..53)
-    expected_checksum = data[54] | (data[55] << 8)
-    actual_checksum = sum(data[:54]) & 0xFFFF
+    # 16-bit checksum
+    expected_checksum = data[checksum_idx] | (data[checksum_idx + 1] << 8)
+    actual_checksum = sum(data[:checksum_idx]) & 0xFFFF
     if actual_checksum != expected_checksum:
         return None
 
     angles = []
-    for i in range(6):
+    for i in range(angle_count):
         offset = 6 + i * 2
         raw = data[offset] | (data[offset + 1] << 8)
         if raw & 0x8000:
             raw -= 0x10000
         angles.append(round(raw / 100.0, 2))
 
+    # V1 兼容: 腿部角度填 0
+    if version == 1:
+        angles += [0.0] * 6
+
     pressures = []
     for i in range(18):
-        offset = 18 + i * 2
+        offset = pressure_offset + i * 2
         raw = data[offset] | (data[offset + 1] << 8)
         pressures.append(raw)
 

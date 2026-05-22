@@ -321,6 +321,10 @@
     let leftLowerAngles = { x: null, y: null, z: null };
     let rightUpperAngles = { x: null, y: null, z: null };
     let rightLowerAngles = { x: null, y: null, z: null };
+    let leftUpperLegAngles = { x: null, y: null, z: null };
+    let leftLowerLegAngles = { x: null, y: null, z: null };
+    let rightUpperLegAngles = { x: null, y: null, z: null };
+    let rightLowerLegAngles = { x: null, y: null, z: null };
     let elbowLeftAngle = 0;
     let elbowRightAngle = 0;
 
@@ -582,17 +586,27 @@
     let scene, renderer, camera, controls, model;
 
     // 存储当前旋转和目标旋转（关键：用插值实现平滑过渡）
+    let hasLegData = false; // 收到腿部传感器数据后才驱动腿骨
+
     let currentRotations = {
       left_upper: { x: 0, y: 0, z: 0 },
       left_lower: { x: 0, y: 0, z: 0 },
       right_upper: { x: 0, y: 0, z: 0 },
-      right_lower: { x: 0, y: 0, z: 0 }
+      right_lower: { x: 0, y: 0, z: 0 },
+      left_upperLeg: { x: 0, y: 0, z: 0 },
+      left_lowerLeg: { x: 0, y: 0, z: 0 },
+      right_upperLeg: { x: 0, y: 0, z: 0 },
+      right_lowerLeg: { x: 0, y: 0, z: 0 }
     };
     let targetRotations = {
       left_upper: { x: 0, y: 0, z: 0 },
       left_lower: { x: 0, y: 0, z: 0 },
       right_upper: { x: 0, y: 0, z: 0 },
-      right_lower: { x: 0, y: 0, z: 0 }
+      right_lower: { x: 0, y: 0, z: 0 },
+      left_upperLeg: { x: 0, y: 0, z: 0 },
+      left_lowerLeg: { x: 0, y: 0, z: 0 },
+      right_upperLeg: { x: 0, y: 0, z: 0 },
+      right_lowerLeg: { x: 0, y: 0, z: 0 }
     };
 
     // 本地BLE桥接WebSocket配置
@@ -725,10 +739,9 @@
         model = obj;
         model.scale.set(0.01, 0.01, 0.01);
         model.position.set(0, -1, 0);
-        // 确保模型正面朝向相机（z 轴正方向），这里取消绕 y 轴 180 度旋转
         model.rotation.y = 0;
         scene.add(model);
-        resetJoints(); // 初始化关节角度
+        resetJoints();
       }, undefined, err => {
         console.error("模型加载错误:", err);
       });
@@ -847,7 +860,6 @@
             break;
           case 'mixamorigRightForeArm': // 右小臂
             child.rotation.order = 'ZXY';
-            // 1. 创建父骨骼（右大臂）在世界坐标系中的旋转
             const rightUpperWorldRot = new THREE.Euler(
               -currentRotations.right_upper.y,
               -currentRotations.right_upper.x,
@@ -855,8 +867,6 @@
               'ZXY'
             );
             const rightUpperWorldQuat = new THREE.Quaternion().setFromEuler(rightUpperWorldRot);
-
-            // 2. 创建小臂在世界坐标系中的目标旋转（来自传感器数据）
             const rightForearmWorldRot = new THREE.Euler(
               currentRotations.right_lower.y,
               currentRotations.right_lower.x,
@@ -864,21 +874,89 @@
               'ZXY'
             );
             const rightForearmWorldQuat = new THREE.Quaternion().setFromEuler(rightForearmWorldRot);
-
-            // 3. 计算小臂相对于大臂的局部旋转
-            // 公式：局部旋转 = 父骨骼世界旋转的逆 × 子骨骼世界旋转
             const rightForearmLocalQuat = new THREE.Quaternion()
               .copy(rightUpperWorldQuat)
               .invert()
               .multiply(rightForearmWorldQuat);
-
-            // 4. 将局部旋转转换为欧拉角并应用
             rotation = new THREE.Euler().setFromQuaternion(rightForearmLocalQuat, 'ZXY');
             child.rotation.copy(rotation);
             jointInfo = { joint: 'right_lower', angles: child.rotation };
             rightLowerArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(rotation);
             break;
-          
+
+          // ── 腿部骨骼 (V2) — 仅在有数据时驱动 ──
+          case 'mixamorigRightUpLeg':
+            if (!hasLegData) break;
+            child.rotation.order = 'ZXY';
+            rotation = new THREE.Euler(
+              -currentRotations.right_upperLeg.y,
+              -currentRotations.right_upperLeg.x,
+              -currentRotations.right_upperLeg.z,
+              'ZXY'
+            );
+            child.rotation.copy(rotation);
+            jointInfo = { joint: 'right_upperLeg', angles: child.rotation };
+            break;
+          case 'mixamorigRightLeg':
+            if (!hasLegData) break;
+            child.rotation.order = 'ZXY';
+            const _rightUpLegWorldRot = new THREE.Euler(
+              -currentRotations.right_upperLeg.y,
+              -currentRotations.right_upperLeg.x,
+              -currentRotations.right_upperLeg.z,
+              'ZXY'
+            );
+            const _rightUpLegWorldQuat = new THREE.Quaternion().setFromEuler(_rightUpLegWorldRot);
+            const _rightLegWorldRot = new THREE.Euler(
+              currentRotations.right_lowerLeg.y,
+              currentRotations.right_lowerLeg.x,
+              -currentRotations.right_lowerLeg.z,
+              'ZXY'
+            );
+            const _rightLegWorldQuat = new THREE.Quaternion().setFromEuler(_rightLegWorldRot);
+            const _rightLegLocalQuat = new THREE.Quaternion()
+              .copy(_rightUpLegWorldQuat).invert().multiply(_rightLegWorldQuat);
+            rotation = new THREE.Euler().setFromQuaternion(_rightLegLocalQuat, 'ZXY');
+            child.rotation.copy(rotation);
+            jointInfo = { joint: 'right_lowerLeg', angles: child.rotation };
+            break;
+
+          case 'mixamorigLeftUpLeg':
+            if (!hasLegData) break;
+            child.rotation.order = 'ZXY';
+            rotation = new THREE.Euler(
+              -currentRotations.left_upperLeg.y,
+              -currentRotations.left_upperLeg.x,
+              -currentRotations.left_upperLeg.z,
+              'ZXY'
+            );
+            child.rotation.copy(rotation);
+            jointInfo = { joint: 'left_upperLeg', angles: child.rotation };
+            break;
+          case 'mixamorigLeftLeg':
+            if (!hasLegData) break;
+            child.rotation.order = 'ZXY';
+            const _leftUpLegWorldRot = new THREE.Euler(
+              -currentRotations.left_upperLeg.y,
+              -currentRotations.left_upperLeg.x,
+              -currentRotations.left_upperLeg.z,
+              'ZXY'
+            );
+            const _leftUpLegWorldQuat = new THREE.Quaternion().setFromEuler(_leftUpLegWorldRot);
+            const _leftLegWorldRot = new THREE.Euler(
+              currentRotations.left_lowerLeg.y,
+              currentRotations.left_lowerLeg.x,
+              -currentRotations.left_lowerLeg.z,
+              'ZXY'
+            );
+            const _leftLegWorldQuat = new THREE.Quaternion().setFromEuler(_leftLegWorldRot);
+            const _leftLegLocalQuat = new THREE.Quaternion()
+              .copy(_leftUpLegWorldQuat).invert().multiply(_leftLegWorldQuat);
+            rotation = new THREE.Euler().setFromQuaternion(_leftLegLocalQuat, 'ZXY');
+            child.rotation.copy(rotation);
+            jointInfo = { joint: 'left_lowerLeg', angles: child.rotation };
+            break;
+
         }
         if (jointInfo) {
           const currentAngles = {
@@ -907,6 +985,26 @@
               rightLowerAngles.x = currentAngles.x;
               rightLowerAngles.y = currentAngles.y;
               rightLowerAngles.z = currentAngles.z;
+              break;
+            case 'left_upperLeg':
+              leftUpperLegAngles.x = currentAngles.x;
+              leftUpperLegAngles.y = currentAngles.y;
+              leftUpperLegAngles.z = currentAngles.z;
+              break;
+            case 'left_lowerLeg':
+              leftLowerLegAngles.x = currentAngles.x;
+              leftLowerLegAngles.y = currentAngles.y;
+              leftLowerLegAngles.z = currentAngles.z;
+              break;
+            case 'right_upperLeg':
+              rightUpperLegAngles.x = currentAngles.x;
+              rightUpperLegAngles.y = currentAngles.y;
+              rightUpperLegAngles.z = currentAngles.z;
+              break;
+            case 'right_lowerLeg':
+              rightLowerLegAngles.x = currentAngles.x;
+              rightLowerLegAngles.y = currentAngles.y;
+              rightLowerLegAngles.z = currentAngles.z;
               break;
           }
         }
@@ -1343,32 +1441,45 @@
       const isRightData = msg.source === 'RIGHT' && Array.isArray(msg.data);
       const isLeftData = msg.source === 'LEFT' && Array.isArray(msg.data);
 
-
       if (isRightData || isLeftData) {
-        const armData = msg.data.slice(0, 6); // 前6个为手臂数据
-        const pressureData = msg.data.slice(6, 24); // 后18个为脚底压力数据
         const armType = isRightData ? 'right' : 'left';
+        const armData = msg.data.slice(0, 6);
+        const pressureData = msg.data.slice(-18);
 
-
-        // 处理大臂数据：弧度（3D模型） + 度数（波形图）
+        // 手臂: indices 0-5
         let upperRad = armData.slice(0, 3).map(deg => THREE.MathUtils.degToRad(deg));
-        let upperDeg = armData.slice(0, 3); // 波形图用原始度数（后续修正）
-
+        let upperDeg = armData.slice(0, 3);
         targetRotations[`${armType}_upper`] = { x: upperRad[0], y: upperRad[1], z: upperRad[2] };
-        // 触发波形图更新事件
         document.dispatchEvent(new CustomEvent('jointDataUpdate', {
           detail: { jointKey: `${armType}_upper`, dataArr: upperDeg }
         }));
 
-        // 处理小臂数据：弧度（3D模型） + 度数（波形图）
         let lowerRad = armData.slice(3, 6).map(deg => THREE.MathUtils.degToRad(deg));
-        let lowerDeg = armData.slice(3, 6); // 波形图用原始度数（后续修正）
-
+        let lowerDeg = armData.slice(3, 6);
         targetRotations[`${armType}_lower`] = { x: lowerRad[0], y: lowerRad[1], z: lowerRad[2] };
-        // 触发波形图更新事件
         document.dispatchEvent(new CustomEvent('jointDataUpdate', {
           detail: { jointKey: `${armType}_lower`, dataArr: lowerDeg }
         }));
+
+        // 腿部: indices 6-11 (V2)
+        if (msg.data.length >= 12) {
+          hasLegData = true;
+          const legData = msg.data.slice(6, 12);
+          let upperLegRad = legData.slice(0, 3).map(deg => THREE.MathUtils.degToRad(deg));
+          let upperLegDeg = legData.slice(0, 3);
+          targetRotations[`${armType}_upperLeg`] = { x: upperLegRad[0], y: upperLegRad[1], z: upperLegRad[2] };
+          document.dispatchEvent(new CustomEvent('jointDataUpdate', {
+            detail: { jointKey: `${armType}_upperLeg`, dataArr: upperLegDeg }
+          }));
+
+          let lowerLegRad = legData.slice(3, 6).map(deg => THREE.MathUtils.degToRad(deg));
+          let lowerLegDeg = legData.slice(3, 6);
+          targetRotations[`${armType}_lowerLeg`] = { x: lowerLegRad[0], y: lowerLegRad[1], z: lowerLegRad[2] };
+          document.dispatchEvent(new CustomEvent('jointDataUpdate', {
+            detail: { jointKey: `${armType}_lowerLeg`, dataArr: lowerLegDeg }
+          }));
+        }
+
         const pressureSum = pressureData.reduce((a, b) => a + b, 0);
         if (armType === 'left') {
           leftFootPressure = pressureSum;
@@ -1452,12 +1563,17 @@
     const mouseNDC = new THREE.Vector2();
     let hoveredBoneName = null;
     const boneWorldPos = {};
-    const BONE_NAMES = ['mixamorigLeftArm','mixamorigLeftForeArm','mixamorigRightArm','mixamorigRightForeArm'];
+    const BONE_NAMES = ['mixamorigLeftArm','mixamorigLeftForeArm','mixamorigRightArm','mixamorigRightForeArm',
+                         'mixamorigLeftUpLeg','mixamorigLeftLeg','mixamorigRightUpLeg','mixamorigRightLeg'];
     const BONE_INFO = {
       mixamorigLeftArm:     { key: 'left_upper',  label: '左大臂' },
       mixamorigLeftForeArm: { key: 'left_lower',  label: '左小臂' },
       mixamorigRightArm:    { key: 'right_upper', label: '右大臂' },
       mixamorigRightForeArm:{ key: 'right_lower', label: '右小臂' },
+      mixamorigLeftUpLeg:   { key: 'left_upperLeg',  label: '左大腿' },
+      mixamorigLeftLeg:     { key: 'left_lowerLeg',  label: '左小腿' },
+      mixamorigRightUpLeg:   { key: 'right_upperLeg', label: '右大腿' },
+      mixamorigRightLeg:    { key: 'right_lowerLeg', label: '右小腿' },
     };
     const HOVER_THRESHOLD = 60;
     const DOT_SIZE = 0.008; // model ~0.018 tall after 0.01 scale, dot ~40% model height
@@ -1507,12 +1623,15 @@
     function showPopup(name, sx, sy) {
       var info = BONE_INFO[name];
       jpTitle.textContent = info.label;
-      // Read current angles from global variables
       var angles = { x: '--', y: '--', z: '--' };
       if (name === 'mixamorigLeftArm')       angles = leftUpperAngles;
       if (name === 'mixamorigLeftForeArm')    angles = leftLowerAngles;
       if (name === 'mixamorigRightArm')       angles = rightUpperAngles;
       if (name === 'mixamorigRightForeArm')  angles = rightLowerAngles;
+      if (name === 'mixamorigLeftUpLeg')      angles = leftUpperLegAngles;
+      if (name === 'mixamorigLeftLeg')        angles = leftLowerLegAngles;
+      if (name === 'mixamorigRightUpLeg')     angles = rightUpperLegAngles;
+      if (name === 'mixamorigRightLeg')       angles = rightLowerLegAngles;
       jpRoll.textContent  = (angles.x || '--') + '°';
       jpPitch.textContent = (angles.y || '--') + '°';
       jpYaw.textContent   = (angles.z || '--') + '°';
