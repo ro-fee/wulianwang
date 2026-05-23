@@ -29,7 +29,7 @@
 
   <!-- 复位按钮 -->
   <div style="position: absolute; top: 10px; width: 100%; text-align: center; z-index: 2;">
-    <button id="resetDeviceBtn" class="reset-device-btn">复位设备</button>
+    <button id="axisToggleBtn" style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:#8b95a8;padding:6px 16px;border-radius:20px;cursor:pointer;font-size:12px;margin-right:8px">坐标线</button><button id="resetDeviceBtn" class="reset-device-btn">复位设备</button>
   </div>
 
   <!-- 无硬件模拟控制面板 -->
@@ -420,32 +420,44 @@
   <h4 style="color:#00e5ff;margin-bottom:12px">关节控制</h4>
   <div class="ctrl-presets" id="ctrl-presets"></div>
   <div class="ctrl-section l"><h4>左臂上</h4>
-    <div class="ctrl-row"><span>前后</span><input type="range" min="-90" max="90" value="0" data-j="left_upper" data-a="y"><span class="v">0°</span></div>
-    <div class="ctrl-row"><span>左右</span><input type="range" min="-40" max="40" value="0" data-j="left_upper" data-a="x"><span class="v">0°</span></div>
-  </div>
+    <div class="ctrl-row"><span>屈伸</span><input type="range" min="-90" max="90" value="0" data-j="left_upper" data-a="屈伸"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>外展</span><input type="range" min="-40" max="40" value="0" data-j="left_upper" data-a="外展"><span class="v">0°</span></div>
+  
+    <div class="ctrl-row"><span>扭转</span><input type="range" min="-30" max="30" value="0" data-j="left_upper" data-a="扭转"><span class="v">0°</span></div></div>
   <div class="ctrl-section l"><h4>左臂下</h4>
-    <div class="ctrl-row"><span>肘屈</span><input type="range" min="-80" max="0" value="0" data-j="left_lower" data-a="y"><span class="v">0°</span></div>
-  </div>
+    <div class="ctrl-row"><span>屈伸</span><input type="range" min="-80" max="0" value="0" data-j="left_lower" data-a="屈伸"><span class="v">0°</span></div>
+  
+    <div class="ctrl-row"><span>外展</span><input type="range" min="-30" max="30" value="0" data-j="left_lower" data-a="外展"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>扭转</span><input type="range" min="-20" max="20" value="0" data-j="left_lower" data-a="扭转"><span class="v">0°</span></div></div>
   <div class="ctrl-section r"><h4>右臂上</h4>
-    <div class="ctrl-row"><span>前后</span><input type="range" min="-90" max="90" value="0" data-j="right_upper" data-a="y"><span class="v">0°</span></div>
-    <div class="ctrl-row"><span>左右</span><input type="range" min="-40" max="40" value="0" data-j="right_upper" data-a="x"><span class="v">0°</span></div>
-  </div>
+    <div class="ctrl-row"><span>屈伸</span><input type="range" min="-90" max="90" value="0" data-j="right_upper" data-a="屈伸"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>外展</span><input type="range" min="-40" max="40" value="0" data-j="right_upper" data-a="外展"><span class="v">0°</span></div>
+  
+    <div class="ctrl-row"><span>扭转</span><input type="range" min="-30" max="30" value="0" data-j="right_upper" data-a="扭转"><span class="v">0°</span></div></div>
   <div class="ctrl-section r"><h4>右臂下</h4>
-    <div class="ctrl-row"><span>肘屈</span><input type="range" min="-80" max="0" value="0" data-j="right_lower" data-a="y"><span class="v">0°</span></div>
-  </div>
+    <div class="ctrl-row"><span>屈伸</span><input type="range" min="-80" max="0" value="0" data-j="right_lower" data-a="屈伸"><span class="v">0°</span></div>
+  
+    <div class="ctrl-row"><span>外展</span><input type="range" min="-30" max="30" value="0" data-j="right_lower" data-a="外展"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>扭转</span><input type="range" min="-20" max="20" value="0" data-j="right_lower" data-a="扭转"><span class="v">0°</span></div></div>
   <div class="ctrl-section l"><h4>左腿上</h4>
-    <div class="ctrl-row"><span>前后</span><input type="range" min="-90" max="90" value="0" data-j="left_upperLeg" data-a="y"><span class="v">0°</span></div>
-    <div class="ctrl-row"><span>左右</span><input type="range" min="-30" max="30" value="0" data-j="left_upperLeg" data-a="x"><span class="v">0°</span></div>
-  </div>
+    <div class="ctrl-row"><span>屈伸</span><input type="range" min="-90" max="90" value="0" data-j="left_upperLeg" data-a="屈伸"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>外展</span><input type="range" min="-30" max="30" value="0" data-j="left_upperLeg" data-a="外展"><span class="v">0°</span></div>
+  
+    <div class="ctrl-row"><span>扭转</span><input type="range" min="-20" max="20" value="0" data-j="left_upperLeg" data-a="扭转"><span class="v">0°</span></div></div>
   <div class="ctrl-section r"><h4>右腿上</h4>
-    <div class="ctrl-row"><span>前后</span><input type="range" min="-90" max="90" value="0" data-j="right_upperLeg" data-a="y"><span class="v">0°</span></div>
-    <div class="ctrl-row"><span>左右</span><input type="range" min="-30" max="30" value="0" data-j="right_upperLeg" data-a="x"><span class="v">0°</span></div>
-  </div>
+    <div class="ctrl-row"><span>屈伸</span><input type="range" min="-90" max="90" value="0" data-j="right_upperLeg" data-a="屈伸"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>外展</span><input type="range" min="-30" max="30" value="0" data-j="right_upperLeg" data-a="外展"><span class="v">0°</span></div>
+  
+    <div class="ctrl-row"><span>扭转</span><input type="range" min="-20" max="20" value="0" data-j="right_upperLeg" data-a="扭转"><span class="v">0°</span></div></div>
   <div class="ctrl-section l"><h4>左腿下</h4>
-    <div class="ctrl-row"><span>膝屈</span><input type="range" min="0" max="90" value="0" data-j="left_lowerLeg" data-a="y"><span class="v">0°</span></div>
-  </div>
+    <div class="ctrl-row"><span>屈伸</span><input type="range" min="0" max="90" value="0" data-j="left_lowerLeg" data-a="屈伸"><span class="v">0°</span></div>
+  
+    <div class="ctrl-row"><span>外展</span><input type="range" min="-20" max="20" value="0" data-j="left_lowerLeg" data-a="外展"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>扭转</span><input type="range" min="-15" max="15" value="0" data-j="left_lowerLeg" data-a="扭转"><span class="v">0°</span></div></div>
   <div class="ctrl-section r"><h4>右腿下</h4>
-    <div class="ctrl-row"><span>膝屈</span><input type="range" min="0" max="90" value="0" data-j="right_lowerLeg" data-a="y"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>屈伸</span><input type="range" min="0" max="90" value="0" data-j="right_lowerLeg" data-a="屈伸"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>外展</span><input type="range" min="-20" max="20" value="0" data-j="right_lowerLeg" data-a="外展"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>扭转</span><input type="range" min="-15" max="15" value="0" data-j="right_lowerLeg" data-a="扭转"><span class="v">0°</span></div></div>
   </div>
 </div>
 <button id="ctrl-toggle">关节控制</button>

@@ -91,7 +91,7 @@ const BONE_MAP = [
     restOffset: { x: 0, y: 0, z: LEG_REST },
     axes: [
       { semantic: 'flexion',   axis: 'x', sign: -1 },  // 前后迈 → X
-      { semantic: 'abduction', axis: 'z', sign: -1 },  // 左右摆 → Z
+      { semantic: 'abduction', axis: 'z', sign: +1 },  // 外展 → Z (正=沿红箭)
       { semantic: 'yaw',       axis: 'y', sign: -1 },  // 内外旋 → Y
     ],
   },
@@ -103,7 +103,7 @@ const BONE_MAP = [
     restOffset: { x: 0, y: 0, z: LEG_REST },
     axes: [
       { semantic: 'flexion',   axis: 'x', sign: -1 },  // 腿 flexion 双侧同号
-      { semantic: 'abduction', axis: 'z', sign: +1 },  // 左右摆 右反号
+      { semantic: 'abduction', axis: 'z', sign: -1 },  // 外展 → Z (正=沿红箭)
       { semantic: 'yaw',       axis: 'y', sign: +1 },  // 内外旋 右反号
     ],
   },

@@ -488,25 +488,36 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
         restStore = captureRestPose(model, ANIM_BONES);
         console.log(`[REST] Cached ${boneCache.size} bones, saved ${restStore.size} rest poses`);
 
-        // 创建坐标轴箭头 (X红 Y绿 Z蓝)
-        const AXIS_COLORS = [0xff4444, 0x44ff44, 0x4444ff];
-        const AXIS_LEN = 15;
+        // 创建解剖坐标轴 (世界空间, 固定在关节位置)
+        // 🔴红=冠状面垂线(外展/左右, 正方向=关节同侧)
+        // 🔵蓝=矢状面垂线(屈伸/前后, 正方向=身体前方)
+        // 🟢绿=横断面垂线(上下, 正方向=头部)
+        const ANATOMY_COLORS = { coronal: 0xff4444, sagittal: 0x4444ff, transverse: 0x44ff44 };
+        const AXIS_LEN = 6;
         ANIM_BONES.forEach(boneName => {
-          const child = getBone(boneCache, boneName);
-          if (child && !boneAxes[boneName]) {
-              const group = new THREE.Group();
-              const origin = new THREE.Vector3(0, 0, 0);
-              const isLeg = boneName.includes('UpLeg') || boneName.includes('Leg');
-              [new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,1)].forEach((dir, i) => {
-                const ci = isLeg ? [2, 1, 0][i] : i;  // 腿: 红蓝互换
-                const arrow = new THREE.ArrowHelper(dir, origin, AXIS_LEN, AXIS_COLORS[ci], 2, 1);
-                group.add(arrow);
-              });
-            child.add(group);
+          const bone = getBone(boneCache, boneName);
+          if (bone && !boneAxes[boneName]) {
+            // 解剖坐标轴: 场景级固定世界方向, 每帧追踪骨骼位置
+            // 🔴红 = 冠状面垂线 (外展方向, 左关节→-X, 右关节→+X)
+            // 🔵蓝 = 矢状面垂线 (屈伸方向, →+Z 前方)
+            // 🟢绿 = 横断面垂线 (上下方向, →+Y 上方)
+            const isLeft = boneName.includes('Left');
+            const group = new THREE.Group();
+            group.add(new THREE.ArrowHelper(
+              new THREE.Vector3(isLeft ? -1 : 1, 0, 0), new THREE.Vector3(0,0,0), AXIS_LEN, 0xff4444, 0.3, 0.15));
+            group.add(new THREE.ArrowHelper(
+              new THREE.Vector3(0, 0, 1), new THREE.Vector3(0,0,0), AXIS_LEN, 0x4444ff, 0.3, 0.15));
+            group.add(new THREE.ArrowHelper(
+              new THREE.Vector3(0, 1, 0), new THREE.Vector3(0,0,0), AXIS_LEN, 0x44ff44, 0.3, 0.15));
+            scene.add(group);  // 场景级, 不受骨骼旋转影响
             boneAxes[boneName] = group;
           }
         });
-        console.log('[AXES] Added RGB axis arrows to', Object.keys(boneAxes).length, 'bones (X=Red, Y=Green, Z=Blue)');
+
+        // 注册骨骼轴位置更新到动画循环
+        const _origAnimate = animate;
+        // (位置更新在 updateJoints 之后做, 见下方)
+        console.log('[AXES] Added semantic axis arrows to', Object.keys(boneAxes).length, 'bones (🔴flexion 🔵abduction 🟢yaw)');
       }, undefined, err => {
         console.error("模型加载错误:", err);
       });
@@ -841,6 +852,16 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
         coordinationElement.title = `队列状态: [${stateQueue.join(', ')}]`;
       }
       updateRecommendation();
+
+      // 更新解剖坐标轴位置 (追踪骨骼世界位置)
+      for (const [name, group] of Object.entries(boneAxes)) {
+        const bone = getBone(boneCache, name);
+        if (bone) {
+          const wp = new THREE.Vector3();
+          bone.getWorldPosition(wp);
+          group.position.copy(wp);
+        }
+      }
     }
 
     function updateRecommendation() {
@@ -1158,8 +1179,11 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
     // 滑块直接设置 targetRotations
     ctrlOverlay.querySelectorAll('input[type=range]').forEach(slider => {
       const joint = slider.dataset.j;
-      const axis = slider.dataset.a;
+      const label = slider.dataset.a; // 屈伸/外展/扭转
       const valSpan = slider.nextElementSibling;
+      // 语义标签→targetRotations 轴映射
+      const AXIS_MAP = { '屈伸': 'y', '外展': 'x', '扭转': 'z' };
+      const axis = AXIS_MAP[label] || 'y';
       slider.addEventListener('input', () => {
         const val = parseFloat(slider.value);
         valSpan.textContent = val + '°';
@@ -1193,8 +1217,10 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
         // 同步滑块
         ctrlOverlay.querySelectorAll('input[type=range]').forEach(sl => {
           const t = targetRotations[sl.dataset.j];
+          const AXIS_MAP = { '屈伸': 'y', '外展': 'x', '扭转': 'z' };
+          const axis = AXIS_MAP[sl.dataset.a] || 'y';
           if (t) {
-            const deg = Math.round(THREE.MathUtils.radToDeg(t[sl.dataset.a] || 0));
+            const deg = Math.round(THREE.MathUtils.radToDeg(t[axis] || 0));
             sl.value = deg;
             sl.nextElementSibling.textContent = deg + '°';
           } else {
@@ -1213,6 +1239,14 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
     };
     document.addEventListener('DOMContentLoaded', () => {
       const resetBtn = document.getElementById('resetDeviceBtn');
+      // 坐标线显隐开关
+      const axisBtn = document.getElementById('axisToggleBtn');
+      if (axisBtn) axisBtn.addEventListener('click', () => {
+        const show = axisBtn.style.color !== 'rgb(0, 229, 255)';
+        for (const g of Object.values(boneAxes)) g.visible = show;
+        axisBtn.style.color = show ? '#00e5ff' : '#8b95a8';
+        axisBtn.style.borderColor = show ? 'rgba(0,229,255,.5)' : 'rgba(0,229,255,.2)';
+      });
       if (resetBtn) resetBtn.addEventListener('click', () => {
         for (const k in manualOffsets) manualOffsets[k] = {x:0,y:0};
         if (bridgeSocket && bridgeSocket.readyState === WebSocket.OPEN)
