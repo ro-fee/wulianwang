@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RGC 硬件接线图</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0b0f17;color:#bcc4d0;font-family:'JetBrains Mono','PingFang SC',sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+h1{color:#00e5ff;font-size:1rem;margin:12px 0 0;letter-spacing:2px}
+.sub{color:#4a5a70;font-size:.62rem;margin:2px 0 8px}
+.tabs{display:flex;gap:6px;margin:4px 0}
+.tabs button{background:#141a24;border:1px solid#283040;color:#8898b0;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:.65rem;font-family:inherit}
+.tabs button:hover{border-color:#00e5ff;color:#00e5ff}
+.tabs button.on{border-color:#ffd93d;color:#ffd93d;background:#1a1f2c}
+.info{color:#4a5a70;font-size:.6rem;text-align:center;margin:2px 0}
+canvas{display:block;margin:4px auto;border:1px solid#18202c;border-radius:6px;background:#0b0f17}
+.legend{display:flex;gap:14px;margin:6px;font-size:.58rem;color:#5a6a80;flex-wrap:wrap;justify-content:center}
+.legend b{padding:0 4px;border-radius:2px}
+.note{color:#4a5a70;font-size:.58rem;margin:4px 0 12px;text-align:center;max-width:1000px;line-height:1.6}
+</style></head>
+<body>
+<h1>RGC 硬件接线图</h1><div class="sub">ESP32-S3 SuperMini ←→ JY901S IMU | 仅数据线 + 共地</div>
+<div class="tabs">
+  <button id="t0" class="on">① 肘部 S3 + 双臂 IMU (RIGHT版)</button>
+  <button id="t1">② 大腿 S3 + 双腿 IMU</button>
+  <button id="t2">③ 腰间 S3 (纯无线)</button>
+</div>
+<div class="info" id="info"></div>
+<canvas id="c"></canvas>
+<div class="legend">
+  <span><b style="background:#ff8c00;color:#000">━━</b> ESP RX ← IMU TX</span>
+  <span><b style="background:#f5c842;color:#000">━━</b> ESP TX → IMU RX</span>
+  <span> | 仅数据线，IMU 独立供电</span>
+</div>
+<div class="note">
+TX/RX 交叉连接：ESP32 的 RX 接 IMU 的 TX，ESP32 的 TX 接 IMU 的 RX | IMU 工作电压 3.3V <b>切勿接 5V</b> | 上电顺序：先 IMU → 再 ESP32
+</div>
+
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=1180,H=660;C.width=W;C.height=H;
+let view=0;
+
+const EX=140,EY=60,EW=340,EH=530,PY0=EY+95,PDY=28,IMU_W=210,IMU_H=105,IMU_X=760;
+const PINS=['3V3','GND','IO1','IO2','IO3','IO4','IO5','IO6','IO7','IO8','IO9','IO10','IO11','IO12'];
+function pY(i){return PY0+i*PDY}
+
+function R(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()}
+
+function pinDot(x,y,color='#d4c060',hl=false){
+  ctx.fillStyle=hl?'#ffe080':color;ctx.shadowColor=hl?color:'transparent';ctx.shadowBlur=hl?8:0;
+  ctx.beginPath();ctx.arc(x,y,5.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle='#0b0f17';ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill();
+}
+
+function wireH(x1,y,x2,color='#888',w=2){
+  ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();
+  ctx.fillStyle='#1a1a1a';ctx.fillRect(x1-3,y-3,6,6);ctx.fillRect(x2-3,y-3,6,6);
+}
+
+function wirePath(pts,color='#888',w=2){
+  ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.stroke();
+  const f=pts[0],l=pts[pts.length-1];
+  ctx.fillStyle='#1a1a1a';ctx.fillRect(f[0]-3,f[1]-3,6,6);ctx.fillRect(l[0]-3,l[1]-3,6,6);
+}
+
+function espBoard(){
+  ctx.fillStyle='#0b2b18';R(EX,EY,EW,EH,5);ctx.fill();ctx.strokeStyle='#164226';ctx.lineWidth=1.2;R(EX,EY,EW,EH,5);ctx.stroke();
+  ctx.fillStyle='#0d331d';R(EX+8,EY+8,EW-16,EH-16,3);ctx.fill();
+  ctx.fillStyle='#2a3a4a';R(EX+EW-26,EY+12,20,44,3);ctx.fill();ctx.fillStyle='#3a4a5a';R(EX+EW-20,EY+20,8,28,2);ctx.fill();
+  ctx.fillStyle='#8898b0';ctx.font='6px "JetBrains Mono"';ctx.fillText('USB',EX+EW-24,EY+64);
+  ctx.fillStyle='#141428';R(EX+90,EY+130,120,80,4);ctx.fill();
+  ctx.fillStyle='#ccd0d8';ctx.font='9px "JetBrains Mono","PingFang SC"';ctx.fillText('ESP32-S3',EX+108,EY+165);ctx.fillText('SuperMini',EX+118,EY+182);
+  ctx.fillStyle='#c8c0a8';R(EX+55,EY+145,38,55,3);ctx.fill();
+  ctx.fillStyle='#d8c870';R(EX+235,EY+20,55,14,2);ctx.fill();ctx.fillStyle='#664400';ctx.font='6px "JetBrains Mono"';ctx.fillText('PCB ANT',EX+245,EY+31);
+  ctx.fillStyle='#164226';ctx.font='6px "JetBrains Mono","PingFang SC"';ctx.fillText('ESP32-S3 SuperMini',EX+80,EY+EH-5);
+  ctx.strokeStyle='#1a3a25';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(EX-2,PY0-10);ctx.lineTo(EX-2,pY(13)+10);ctx.stroke();
+}
+
+// IMU: only TX/RX/GND connect to ESP32, VCC powered from shared battery (not through ESP32 pin)
+function imuDraw(x, yTX, yRX, label){
+  const padSpacing = yRX - yTX;
+  const yGND = yRX + padSpacing + 6;
+  const top = yTX - 26;
+  const h = yGND - top + 16;
+
+  ctx.fillStyle='#0d1d26';R(x,top,IMU_W,h,4);ctx.fill();ctx.strokeStyle='#163648';ctx.lineWidth=1;R(x,top,IMU_W,h,4);ctx.stroke();
+  ctx.fillStyle='#1a1a30';R(x+20,top+15,55,50,3);ctx.fill();ctx.fillStyle='#5a8a9a';ctx.font='7px "JetBrains Mono"';ctx.fillText('ICM-',x+26,top+37);ctx.fillText('20948',x+28,top+52);
+  ctx.fillStyle='#141428';R(x+100,top+18,38,45,3);ctx.fill();ctx.fillStyle='#8898b0';ctx.font='5px "JetBrains Mono"';ctx.fillText('MCU',x+105,top+43);
+
+  const padX=x+IMU_W-5;
+  const pads=[
+    {y:yTX,  n:'TX',  c:'#ff8c00'},
+    {y:yRX,  n:'RX',  c:'#f5c842'},
+    {y:yGND, n:'GND', c:'#444'},
+  ];
+  pads.forEach(p=>{
+    ctx.fillStyle='#886644';ctx.beginPath();ctx.arc(padX,p.y,5.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#0b0f17';ctx.beginPath();ctx.arc(padX,p.y,2.2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=p.c;ctx.font='bold 7px "JetBrains Mono"';ctx.fillText(p.n,padX+8,p.y+3);
+  });
+
+  // VCC — not connected (IMU independently powered)
+  const yVCC = yTX - padSpacing - 6;
+  ctx.fillStyle='#332';ctx.beginPath();ctx.arc(padX,yVCC,5.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#0b0f17';ctx.beginPath();ctx.arc(padX,yVCC,2.2,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#433';ctx.font='bold 6px "JetBrains Mono"';ctx.fillText('VCC',padX+8,yVCC+3);
+
+  ctx.fillStyle='#5a8878';ctx.font='bold 10px "JetBrains Mono","PingFang SC"';ctx.fillText(label,x+10,top+13);
+  return {x:padX, tx:yTX, rx:yRX, gnd:yGND, vcc:yVCC, top, bottom:yGND+10};
+}
+
+// ═══ VIEW 0: ELBOW S3 ═══
+function drawElbow(){
+  espBoard();
+  const y2=pY(3),y3=pY(4),y10=pY(11),y12=pY(12); // IO2, IO3, IO10, IO11
+  const upperIMU=imuDraw(IMU_X,y2,y3,'上臂 JY901S');
+  const lowerIMU=imuDraw(IMU_X,y10,y12,'下臂 JY901S');
+
+  const highlight=new Set([3,4,11,12]); // IO2, IO3, IO10, IO11 (data pins only)
+  const control=new Set([2,5,10,13]); // IO1, IO4, IO9, IO12
+  PINS.forEach((n,i)=>{
+    const y=pY(i);
+    let c=n==='3V3'?'#554':n==='GND'?'#444':'#d4c060';
+    pinDot(EX,y,c,highlight.has(i));
+    const lc=n==='3V3'?'#544':n==='GND'?'#555':highlight.has(i)?'#ffe080':'#6a7a90';
+    ctx.fillStyle=lc;ctx.font='bold 7px "JetBrains Mono"';ctx.textAlign='right';ctx.fillText(n,EX-8,y+3);
+    if(control.has(i)){ctx.fillStyle='#8b6ce6';ctx.shadowColor='#8b6ce6';ctx.shadowBlur=4;ctx.beginPath();ctx.arc(EX+2,y,3,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+  });
+  ctx.textAlign='start';
+
+  // Data wires — straight horizontal, zero crossings, no power/ground
+  wireH(EX,y2,upperIMU.x,'#ff8c00',2.2); // IO2 ← upper TX
+  wireH(EX,y3,upperIMU.x,'#f5c842',2);   // IO3 → upper RX
+  wireH(EX,y10,lowerIMU.x,'#3ddc84',2.2); // IO10 ← lower TX
+  wireH(EX,y12,lowerIMU.x,'#5599ff',2);   // IO11 → lower RX
+
+  // Wire labels
+  const lx=545;
+  ctx.font='bold 8px "JetBrains Mono","PingFang SC"';
+  ctx.fillStyle='#ff8c00';ctx.fillText('IO2(RX) ← 上臂 TX',lx,upperIMU.tx+3);
+  ctx.fillStyle='#f5c842';ctx.fillText('IO3(TX) → 上臂 RX',lx,upperIMU.rx+3);
+  ctx.fillStyle='#3ddc84';ctx.fillText('IO10(RX) ← 下臂 TX',lx,lowerIMU.tx+3);
+  ctx.fillStyle='#5599ff';ctx.fillText('IO11(TX) → 下臂 RX',lx,lowerIMU.rx+3);
+
+  ctx.fillStyle='#3a4a5a';ctx.font='6px "JetBrains Mono","PingFang SC"';
+  ctx.fillText('当前: RIGHT版 | LEFT版: 上臂用IO10/IO11, 下臂用IO2/IO3 (互换)',EX+10,EY+EH+14);
+  ctx.fillText('仅数据线(IO2/3上臂, IO10/11下臂) | IMU独立供电 | IO1/IO4/IO9/IO12(紫点)→控制',EX+10,EY+EH+28);
+}
+
+// ═══ VIEW 1: THIGH S3 ═══
+function drawThigh(){
+  espBoard();
+  const y4=pY(5),y5=pY(6),y6=pY(7),y7=pY(8);
+  const upperIMU=imuDraw(IMU_X,y4,y5,'大腿 JY901S');
+  const lowerIMU=imuDraw(IMU_X,y6,y7,'小腿 JY901S');
+
+  const highlight=new Set([5,6,7,8]); // IO4, IO5, IO6, IO7 (data pins only)
+  PINS.forEach((n,i)=>{
+    const y=pY(i);
+    let c=n==='3V3'?'#554':n==='GND'?'#444':'#d4c060';
+    pinDot(EX,y,c,highlight.has(i));
+    const lc=n==='3V3'?'#544':n==='GND'?'#555':highlight.has(i)?'#ffe080':'#6a7a90';
+    ctx.fillStyle=lc;ctx.font='bold 7px "JetBrains Mono"';ctx.textAlign='right';ctx.fillText(n,EX-8,y+3);
+  });
+  ctx.textAlign='start';
+
+  wireH(EX,y4,upperIMU.x,'#ff8c00',2.2);
+  wireH(EX,y5,upperIMU.x,'#f5c842',2);
+  wireH(EX,y6,lowerIMU.x,'#3ddc84',2.2);
+  wireH(EX,y7,lowerIMU.x,'#5599ff',2);
+
+  const lx=545;
+  ctx.font='bold 8px "JetBrains Mono","PingFang SC"';
+  ctx.fillStyle='#ff8c00';ctx.fillText('IO4(RX) ← 大腿 TX',lx,upperIMU.tx+3);
+  ctx.fillStyle='#f5c842';ctx.fillText('IO5(TX) → 大腿 RX',lx,upperIMU.rx+3);
+  ctx.fillStyle='#3ddc84';ctx.fillText('IO6(RX) ← 小腿 TX',lx,lowerIMU.tx+3);
+  ctx.fillStyle='#5599ff';ctx.fillText('IO7(TX) → 小腿 RX',lx,lowerIMU.rx+3);
+
+  ctx.fillStyle='#3a4a5a';ctx.font='6px "JetBrains Mono","PingFang SC"';
+  ctx.fillText('LEFT/RIGHT 版引脚相同 | 小腿IMU杜邦线沿绑带走到膝盖下方 | 仅数据线，IMU独立供电',EX+10,EY+EH+14);
+}
+
+// ═══ VIEW 2: WAIST S3 ═══
+function drawWaist(){
+  espBoard();
+  // USB cable
+  ctx.strokeStyle='#3a4a5a';ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(EX+EW,EY+35);ctx.lineTo(EX+EW+70,EY+35);ctx.stroke();
+  // Power bank
+  const pbX=EX+EW+76,pbY=EY-10,pbW=85,pbH=95;
+  ctx.fillStyle='#222820';R(pbX,pbY,pbW,pbH,5);ctx.fill();ctx.strokeStyle='#333830';R(pbX,pbY,pbW,pbH,5);ctx.stroke();
+  ctx.fillStyle='#ffcc88';ctx.font='bold 9px "JetBrains Mono","PingFang SC"';ctx.fillText('充电宝',pbX+12,pbY+40);
+  ctx.fillStyle='#5a6a70';ctx.font='7px "JetBrains Mono"';ctx.fillText('USB 5V',pbX+18,pbY+58);ctx.fillText('供电',pbX+24,pbY+78);
+
+  PINS.forEach((n,i)=>{
+    const y=pY(i);
+    let c=n==='GND'?'#777':n==='3V3'?'#ff5555':'#d4c060';
+    pinDot(EX,y,c,false);
+    const lc=n==='3V3'?'#ff6b6b':n==='GND'?'#888':'#6a7a90';
+    ctx.fillStyle=lc;ctx.font='bold 7px "JetBrains Mono"';ctx.textAlign='right';ctx.fillText(n,EX-8,y+3);
+  });
+  ctx.textAlign='start';
+
+  ctx.fillStyle='#2a3a2a';ctx.font='bold 12px "JetBrains Mono","PingFang SC"';ctx.fillText('⚡ 无传感器接线 — 纯无线汇聚',250,280);
+  ctx.font='9px "JetBrains Mono","PingFang SC"';ctx.fillStyle='#4a5a50';ctx.fillText('USB 口接充电宝即可，无需任何杜邦线',270,305);
+
+  const bx=660,by=120;
+  ctx.fillStyle='rgba(255,217,61,.06)';R(bx,by,240,110,6);ctx.fill();ctx.strokeStyle='rgba(255,217,61,.18)';R(bx,by,240,110,6);ctx.stroke();
+  for(let i=0;i<3;i++){ctx.strokeStyle='#ffd93d';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(bx+65+i*40,by+45,20-4*i,-Math.PI*.65,Math.PI*.65);ctx.stroke();}
+  ctx.fillStyle='#ffd93d';ctx.font='bold 10px "JetBrains Mono","PingFang SC"';ctx.fillText('ESP-NOW 无线接收',bx+20,by+85);ctx.fillText('← 肘部 S3 + 大腿 S3',bx+15,by+103);
+
+  const b2y=by+130;
+  ctx.fillStyle='rgba(0,229,255,.06)';R(bx,b2y,240,90,6);ctx.fill();ctx.strokeStyle='rgba(0,229,255,.18)';R(bx,b2y,240,90,6);ctx.stroke();
+  ctx.strokeStyle='#00e5ff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(bx+120,b2y+40,16,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(bx+120,b2y+40,9,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#00e5ff';ctx.font='bold 10px "JetBrains Mono","PingFang SC"';ctx.fillText('BLE 蓝牙发送 → PC',bx+30,b2y+55);ctx.fillText('设备名: RGC-BLE-LEFT/RIGHT',bx+15,b2y+75);
+
+  ctx.fillStyle='#3a4a5a';ctx.font='6px "JetBrains Mono","PingFang SC"';ctx.fillText('腰间 S3 通过 ESP-NOW 接收肘部和大腿数据，组装 V2 RG 包后 BLE 发送到电脑',EX+10,EY+EH+14);
+}
+
+const infos=['IO2←上臂TX | IO3→上臂RX | IO10←下臂TX | IO11→下臂RX | 仅4根数据线','IO4←大腿TX | IO5→大腿RX | IO6←小腿TX | IO7→小腿RX | 仅4根数据线','USB充电宝供电 | ESP-NOW RX×2 | BLE→PC | 无杜邦线'];
+function show(v){view=v;ctx.clearRect(0,0,W,H);ctx.fillStyle='#0b0f17';ctx.fillRect(0,0,W,H);if(v===0)drawElbow();else if(v===1)drawThigh();else drawWaist();['t0','t1','t2'].forEach((id,i)=>document.getElementById(id).className=i===v?'on':'');document.getElementById('info').textContent=infos[v];}
+['t0','t1','t2'].forEach((id,i)=>document.getElementById(id).addEventListener('click',()=>show(i)));show(0);
+</script></body></html>

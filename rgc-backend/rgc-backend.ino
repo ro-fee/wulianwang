@@ -20,8 +20,10 @@ static BLEAddress targetAddress("FF:24:08:20:53:BD"); // 左足
 static BLEAddress targetAddress("FF:23:10:16:02:EA"); // 右足
 #endif
 
-// ── ESP-NOW 目标: 腰间 S3 MAC ──
-static const uint8_t WAIST_MAC[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+// ── ESP-NOW 目标: 腰间 S3 MAC (烧录前替换为实际 MAC 地址！) ──
+// 获取方式: 先烧录 hub-waist.ino → 串口监视器(115200) → 复制打印的 MAC 地址
+// ESP-NOW 不支持广播地址，使用 FF:FF:FF:FF:FF:FF 将导致通信失败
+static const uint8_t WAIST_MAC[] = {0xA0, 0xDD, 0xCC, 0xDD, 0xEE, 0xFF}; // ← 替换为实际 MAC
 
 // ── ESP-NOW 发送间隔 ──
 static const unsigned long ESP_NOW_SEND_INTERVAL_MS = 30;
@@ -197,7 +199,7 @@ void normalizeAnglePressure() {
 // ═══════════════════════════════════════════
 // ESP-NOW 发送
 // ═══════════════════════════════════════════
-void onEspNowSend(const uint8_t *mac, esp_now_send_status_t status) {}
+void onEspNowSend(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {}
 
 void sendArmDataViaEspNow() {
   ArmEspNowPacket pkt;
@@ -347,5 +349,7 @@ void loop() {
       sendArmDataViaEspNow();
       lastSendMs = now;
     }
+    // newData 标志只有在新数据到达时才会被 processSensor 重新置 true，
+    // 此处仅记录"已处理过"，丢掉中间帧是目的性降采样（100Hz→33Hz）
   }
 }

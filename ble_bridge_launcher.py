@@ -267,37 +267,58 @@ class BleForwarder:
     def on_notification(self, _sender, data):
         self.buffer.extend(data)
 
-        # 查找RG头 (0x52, 0x47) 并尝试解析56字节完整包
-        while len(self.buffer) >= 56:
+        # 查找RG头 (0x52, 0x47)，根据版本自动识别 V1(56字节)/V2(68字节)
+        while len(self.buffer) >= 4:  # 至少需要 4 字节才能读版本号和载荷长度
             # 找到第一个RG头
             pos = 0
             while pos <= len(self.buffer) - 2:
                 if self.buffer[pos] == 0x52 and self.buffer[pos + 1] == 0x47:
                     break
                 pos += 1
-            if pos > len(self.buffer) - 56:
-                # RG头太靠后或没找到，丢弃前面无效字节
+
+            if pos > len(self.buffer) - 4:
+                # RG头找到但不够读版本号和载荷长度，丢弃前面无效字节后等待更多数据
                 if pos > 0:
                     del self.buffer[:pos]
                 break
 
-            # 取出56字节尝试解析
-            chunk = self.buffer[pos:pos + 56]
+            # 读取版本号和载荷长度，确定包大小
+            version = self.buffer[pos + 2]
+            payload_len = self.buffer[pos + 3]
+
+            # 已知版本对应包长: V1=56, V2=68
+            version_packet_sizes = {1: 56, 2: 68}
+            if version in version_packet_sizes:
+                expected_len = version_packet_sizes[version]
+            else:
+                # 未知版本，跳过RG头继续扫描
+                del self.buffer[:pos + 2]
+                continue
+
+            if len(self.buffer) < pos + expected_len:
+                # 数据不够一个完整包，等待更多数据
+                if pos > 0:
+                    del self.buffer[:pos]
+                break
+
+            chunk = self.buffer[pos:pos + expected_len]
             parsed = parse_rg_packet(chunk)
             if parsed is not None:
                 parsed["source"] = self.source
                 self.packet_count += 1
                 if self.packet_count % 20 == 1:
-                    print(f"[BLE-{self.source}] 收到数据包 #{self.packet_count}, "
-                          f"角度: {[parsed['data'][i] for i in range(6)]}, "
-                          f"压力[{len(parsed['data']) - 6}个]")
+                    angle_count = min(6, len(parsed['data']) - 18)
+                    print(f"[BLE-{self.source}] 收到数据包 #{self.packet_count} "
+                          f"(V{version}), "
+                          f"角度: {[parsed['data'][i] for i in range(angle_count)]}, "
+                          f"压力[{len(parsed['data']) - angle_count}个]")
                 if self.loop:
                     self.loop.call_soon_threadsafe(
                         lambda p=parsed: asyncio.create_task(broadcast_packet(p))
                     )
-                del self.buffer[:pos + 56]
+                del self.buffer[:pos + expected_len]
             else:
-                # 校验失败，跳过这个RG头
+                # 校验失败，跳过RG头继续扫描
                 del self.buffer[:pos + 2]
 
 

@@ -27,10 +27,138 @@
 <body>
   <div id="canvas-container"></div>
 
-  <!-- 新增复位按钮 -->
-  <div style="position: absolute; top: 20px; width: 100%; text-align: center; z-index: 2;">
+  <!-- 复位按钮 -->
+  <div style="position: absolute; top: 10px; width: 100%; text-align: center; z-index: 2;">
     <button id="resetDeviceBtn" class="reset-device-btn">复位设备</button>
   </div>
+
+  <!-- 无硬件模拟控制面板 -->
+  <div id="manual-panel" style="
+    position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+    z-index:10; display:flex; gap:30px;
+    background:rgba(8,12,20,.88); border:1px solid rgba(0,229,255,.25);
+    border-radius:16px; padding:16px 24px;
+    font-family:'PingFang SC',sans-serif;
+  ">
+    <!-- 左手 -->
+    <div style="text-align:center;">
+      <div style="color:#00e5ff; font-size:13px; margin-bottom:8px; letter-spacing:.05em;">左手</div>
+      <div style="display:grid; grid-template-columns:44px 44px 44px; grid-template-rows:44px 44px 44px; gap:4px;">
+        <span></span>
+        <button class="man-btn" data-joint="left_upper" data-axis="y" data-val="-40">前</button>
+        <span></span>
+        <button class="man-btn" data-joint="left_upper" data-axis="x" data-val="-20">左</button>
+        <span style="color:#8b95a8;font-size:11px;line-height:44px;">L</span>
+        <button class="man-btn" data-joint="left_upper" data-axis="x" data-val="+20">右</button>
+        <span></span>
+        <button class="man-btn" data-joint="left_upper" data-axis="y" data-val="+40">后</button>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- 右手 -->
+    <div style="text-align:center;">
+      <div style="color:#ff6384; font-size:13px; margin-bottom:8px; letter-spacing:.05em;">右手</div>
+      <div style="display:grid; grid-template-columns:44px 44px 44px; grid-template-rows:44px 44px 44px; gap:4px;">
+        <span></span>
+        <button class="man-btn" data-joint="right_upper" data-axis="y" data-val="-40">前</button>
+        <span></span>
+        <button class="man-btn" data-joint="right_upper" data-axis="x" data-val="-20">左</button>
+        <span style="color:#8b95a8;font-size:11px;line-height:44px;">R</span>
+        <button class="man-btn" data-joint="right_upper" data-axis="x" data-val="+20">右</button>
+        <span></span>
+        <button class="man-btn" data-joint="right_upper" data-axis="y" data-val="+40">后</button>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- 左腿 -->
+    <div style="text-align:center;">
+      <div style="color:#4fc3f7; font-size:13px; margin-bottom:8px; letter-spacing:.05em;">左腿</div>
+      <div style="display:grid; grid-template-columns:44px 44px 44px; grid-template-rows:44px 44px 44px; gap:4px;">
+        <span></span>
+        <button class="man-btn" data-joint="left_upperLeg" data-axis="y" data-val="-30">前</button>
+        <span></span>
+        <button class="man-btn" data-joint="left_upperLeg" data-axis="x" data-val="-15">左</button>
+        <span style="color:#8b95a8;font-size:11px;line-height:44px;">L</span>
+        <button class="man-btn" data-joint="left_upperLeg" data-axis="x" data-val="+15">右</button>
+        <span></span>
+        <button class="man-btn" data-joint="left_upperLeg" data-axis="y" data-val="+30">后</button>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- 右腿 -->
+    <div style="text-align:center;">
+      <div style="color:#ef5350; font-size:13px; margin-bottom:8px; letter-spacing:.05em;">右腿</div>
+      <div style="display:grid; grid-template-columns:44px 44px 44px; grid-template-rows:44px 44px 44px; gap:4px;">
+        <span></span>
+        <button class="man-btn" data-joint="right_upperLeg" data-axis="y" data-val="-30">前</button>
+        <span></span>
+        <button class="man-btn" data-joint="right_upperLeg" data-axis="x" data-val="-15">左</button>
+        <span style="color:#8b95a8;font-size:11px;line-height:44px;">R</span>
+        <button class="man-btn" data-joint="right_upperLeg" data-axis="x" data-val="+15">右</button>
+        <span></span>
+        <button class="man-btn" data-joint="right_upperLeg" data-axis="y" data-val="+30">后</button>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- 走路开关 -->
+    <div style="text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <button id="walkToggleBtn" style="
+        width:60px;height:60px;border-radius:50%;
+        background:rgba(0,255,100,.1); border:2px solid rgba(0,255,100,.25);
+        color:#0f0; font-size:20px; cursor:pointer; transition:all .2s;
+      " title="走路">🚶</button>
+      <span style="color:#8b95a8;font-size:10px;">走路</span>
+    </div>
+  </div>
+
+  <style>
+    .man-btn {
+      background:rgba(0,229,255,.08); border:1px solid rgba(0,229,255,.2);
+      color:#c8d6e5; font-size:13px; border-radius:8px; cursor:pointer;
+      transition:all .15s; user-select:none; -webkit-user-select:none;
+    }
+    .man-btn:hover { background:rgba(0,229,255,.2); border-color:rgba(0,229,255,.5); }
+    .man-btn:active, .man-btn.active { background:rgba(0,229,255,.35); color:#fff; box-shadow:0 0 12px rgba(0,229,255,.3); }
+    .walk-on { background:rgba(0,255,100,.35) !important; border-color:rgba(0,255,100,.6) !important; box-shadow:0 0 16px rgba(0,255,100,.4) !important; }
+    .reset-device-btn {
+      background:rgba(255,99,132,.1); border:1px solid rgba(255,99,132,.3);
+      color:#ff6384; padding:6px 20px; border-radius:20px; cursor:pointer;
+      font-size:13px; letter-spacing:.05em; transition:all .2s;
+    }
+    .reset-device-btn:hover { background:rgba(255,99,132,.2); box-shadow:0 0 10px rgba(255,99,132,.2); }
+  
+/* ── 控制面板浮层 ── */
+#ctrl-overlay{position:fixed;top:0;right:-360px;width:340px;height:100vh;z-index:300;
+  background:rgba(6,10,18,.96);border-left:1px solid rgba(0,229,255,.2);
+  transition:right .3s ease;overflow-y:auto;padding:16px;
+  font-family:'PingFang SC',sans-serif;font-size:12px;color:#c8d6e5;}
+#ctrl-overlay.open{right:0;}
+#ctrl-toggle{position:fixed;top:50%;right:0;z-index:301;transform:translateY(-50%);
+  background:rgba(0,229,255,.15);border:1px solid rgba(0,229,255,.3);color:#00e5ff;
+  padding:10px 6px;border-radius:8px 0 0 8px;cursor:pointer;font-size:13px;
+  writing-mode:vertical-lr;letter-spacing:.1em;transition:right .3s ease;}
+#ctrl-overlay.open + #ctrl-toggle{right:340px;}
+.ctrl-section{margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:8px}
+.ctrl-section h4{font-size:13px;margin-bottom:6px}
+.ctrl-section.l h4{color:#ffaa00}.ctrl-section.r h4{color:#aa44ff}
+.ctrl-row{display:flex;align-items:center;gap:8px;margin:3px 0}
+.ctrl-row span{width:40px;text-align:right;font-size:11px;color:#8b95a8;flex-shrink:0}
+.ctrl-row input[type=range]{flex:1;accent-color:#00e5ff;height:4px}
+.ctrl-row .v{width:36px;text-align:center;font-size:11px;font-family:monospace;flex-shrink:0}
+.ctrl-presets{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.ctrl-presets button{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);color:#8b95a8;
+  padding:4px 10px;border-radius:10px;cursor:pointer;font-size:11px;transition:all .15s}
+.ctrl-presets button:hover{background:rgba(0,229,255,.15);color:#c8d6e5}
+#ctrl-close{position:absolute;top:8px;right:12px;background:none;border:none;color:#586274;font-size:20px;cursor:pointer}
+#ctrl-close:hover{color:#ff6384}
+#ctrl-overlay::-webkit-scrollbar{width:4px}
+#ctrl-overlay::-webkit-scrollbar-thumb{background:rgba(0,229,255,.2);border-radius:2px}
+
+</style>
 
   <!-- 关节信息浮层 -->
   <div id="joint-popup" style="
@@ -588,9 +716,14 @@
     // 存储当前旋转和目标旋转（关键：用插值实现平滑过渡）
     let hasLegData = false; // 收到腿部传感器数据后才驱动腿骨
 
+    // T-pose → A-pose; 腿 rest pose Z=180°
+    let currentArmDown = THREE.MathUtils.degToRad(80);
+    const ARM_DOWN_APOSE = THREE.MathUtils.degToRad(80);
+    const ARM_DOWN_TPOSE = THREE.MathUtils.degToRad(0);
+    const LEG_REST_Z = THREE.MathUtils.degToRad(180);
     let currentRotations = {
-      left_upper: { x: 0, y: 0, z: 0 },
-      left_lower: { x: 0, y: 0, z: 0 },
+      left_upper:  { x: 0, y: 0, z: 0 },
+      left_lower:  { x: 0, y: 0, z: 0 },
       right_upper: { x: 0, y: 0, z: 0 },
       right_lower: { x: 0, y: 0, z: 0 },
       left_upperLeg: { x: 0, y: 0, z: 0 },
@@ -599,8 +732,8 @@
       right_lowerLeg: { x: 0, y: 0, z: 0 }
     };
     let targetRotations = {
-      left_upper: { x: 0, y: 0, z: 0 },
-      left_lower: { x: 0, y: 0, z: 0 },
+      left_upper:  { x: 0, y: 0, z: 0 },
+      left_lower:  { x: 0, y: 0, z: 0 },
       right_upper: { x: 0, y: 0, z: 0 },
       right_lower: { x: 0, y: 0, z: 0 },
       left_upperLeg: { x: 0, y: 0, z: 0 },
@@ -733,6 +866,15 @@
 
 
 
+    // 保存每个骨骼的 rest pose 四元数
+    const boneRestQuats = {};
+    const ANIM_BONES = [
+      'mixamorigLeftArm', 'mixamorigLeftForeArm', 'mixamorigRightArm', 'mixamorigRightForeArm',
+      'mixamorigLeftUpLeg', 'mixamorigLeftLeg', 'mixamorigRightUpLeg', 'mixamorigRightLeg'
+    ];
+    // 坐标轴辅助线
+    const boneAxes = {};  // boneName → THREE.Group
+
     function loadFBX() {
       const loader = new FBXLoader();
       loader.load("img/manModule.fbx", obj => {
@@ -741,18 +883,38 @@
         model.position.set(0, -1, 0);
         model.rotation.y = 0;
         scene.add(model);
-        resetJoints();
+        // 保存 rest pose（必须在 scene.add 后，世界矩阵才更新）
+        model.updateMatrixWorld();
+        model.traverse(child => {
+          if (child.isBone && ANIM_BONES.includes(child.name) && !boneRestQuats[child.name]) {
+            boneRestQuats[child.name] = child.quaternion.clone();
+            console.log(`[REST] ${child.name}: order=${child.rotation.order} quat=(${child.quaternion.x.toFixed(3)},${child.quaternion.y.toFixed(3)},${child.quaternion.z.toFixed(3)},${child.quaternion.w.toFixed(3)}) rot=(${THREE.MathUtils.radToDeg(child.rotation.x).toFixed(1)},${THREE.MathUtils.radToDeg(child.rotation.y).toFixed(1)},${THREE.MathUtils.radToDeg(child.rotation.z).toFixed(1)})°`);
+          }
+        });
+        console.log(`[REST] Saved ${Object.keys(boneRestQuats).length} bone rest poses`);
+
+        // 创建坐标轴箭头 (X红 Y绿 Z蓝)
+        const AXIS_COLORS = [0xff4444, 0x44ff44, 0x4444ff];
+        const AXIS_LEN = 15;
+        ANIM_BONES.forEach(boneName => {
+          model.traverse(child => {
+            if (child.isBone && child.name === boneName && !boneAxes[boneName]) {
+              const group = new THREE.Group();
+              const origin = new THREE.Vector3(0, 0, 0);
+              const isLeg = boneName.includes('UpLeg') || boneName.includes('Leg');
+              [new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,1)].forEach((dir, i) => {
+                const ci = isLeg ? [2, 1, 0][i] : i;  // 腿: 红蓝互换
+                const arrow = new THREE.ArrowHelper(dir, origin, AXIS_LEN, AXIS_COLORS[ci], 2, 1);
+                group.add(arrow);
+              });
+              child.add(group);
+              boneAxes[boneName] = group;
+            }
+          });
+        });
+        console.log('[AXES] Added RGB axis arrows to', Object.keys(boneAxes).length, 'bones (X=Red, Y=Green, Z=Blue)');
       }, undefined, err => {
         console.error("模型加载错误:", err);
-      });
-    }
-    // 重置关节初始角度
-    function resetJoints() {
-      if (!model) return;
-      model.traverse(child => {
-        if (['mixamorigLeftArm', 'mixamorigLeftForeArm', 'mixamorigRightArm', 'mixamorigRightForeArm'].includes(child.name)) {
-          child.rotation.set(0, 0, 0);
-        }
       });
     }
 
@@ -783,6 +945,21 @@
         );
       }
 
+      // 每 100 帧打印一次骨骼状态
+      if (typeof _dbgFrame === 'undefined') window._dbgFrame = 0;
+      window._dbgFrame++;
+      if (window._dbgFrame % 100 === 1) {
+        for (const [name, q] of Object.entries(boneRestQuats)) {
+          // 找到对应骨骼
+          let found = null;
+          model.traverse(c => { if (c.name === name && c.isBone) found = c; });
+          if (found) {
+            const euler = new THREE.Euler().setFromQuaternion(found.quaternion, 'XYZ');
+            console.log(`[F${window._dbgFrame}] ${name}: rot=(${THREE.MathUtils.radToDeg(euler.x).toFixed(1)},${THREE.MathUtils.radToDeg(euler.y).toFixed(1)},${THREE.MathUtils.radToDeg(euler.z).toFixed(1)})°`);
+          }
+        }
+      }
+
 
       //-----------------左侧边抽屉信息处理---------------------------------------------------------------------------------------
       leftUpperAngles = { x: null, y: null, z: null };
@@ -799,164 +976,92 @@
       model.traverse(child => {
         let jointInfo = null;
         let rotation;
-        switch (child.name) {
-          case 'mixamorigLeftArm': // 左大臂
-            child.rotation.order = 'ZXY';
-            rotation = new THREE.Euler(
-              -currentRotations.left_upper.y,
-              -currentRotations.left_upper.x,
-              -currentRotations.left_upper.z
-            );
-            child.rotation.copy(rotation);
-            jointInfo = { joint: 'left_upper', angles: child.rotation };
-            // 计算大臂方向向量
-            leftUpperArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(rotation);
-            break;
-          case 'mixamorigLeftForeArm': // 左小臂
-            child.rotation.order = 'ZXY';
-            // 1. 创建父骨骼（左大臂）在世界坐标系中的旋转
-            const leftUpperWorldRot = new THREE.Euler(
-              -currentRotations.left_upper.y,
-              -currentRotations.left_upper.x,
-              -currentRotations.left_upper.z,
-              'ZXY'
-            );
-            const leftUpperWorldQuat = new THREE.Quaternion().setFromEuler(leftUpperWorldRot);
+        const name = child.name;
+        const restQuat = boneRestQuats[name];
+        if (!restQuat) return;  // 跳过非动画骨骼
 
-            // 2. 创建小臂在世界坐标系中的目标旋转（来自传感器数据）
-            const leftForearmWorldRot = new THREE.Euler(
-              currentRotations.left_lower.y,
-              currentRotations.left_lower.x,
-              -currentRotations.left_lower.z,
-              'ZXY'
-            );
-            const leftForearmWorldQuat = new THREE.Quaternion().setFromEuler(leftForearmWorldRot);
+        // 传感器欧拉角 → 四元数 (ZXY 顺序: Z=侧向/Roll, X=前后/Pitch, Y=扭转/Yaw)
+        // 左侧: Roll/Yaw 取负; 右侧: Roll/Yaw 取正
+        const isRight = name.startsWith('mixamorigRight');
+        const signRoll = isRight ? 1 : -1;
+        const signYaw  = isRight ? 1 : -1;
 
-            // 3. 计算小臂相对于大臂的局部旋转
-            // 公式：局部旋转 = 父骨骼世界旋转的逆 × 子骨骼世界旋转
-            const leftForearmLocalQuat = new THREE.Quaternion()
-              .copy(leftUpperWorldQuat)
-              .invert()
-              .multiply(leftForearmWorldQuat);
-
-            // 4. 将局部旋转转换为欧拉角并应用
-            rotation = new THREE.Euler().setFromQuaternion(leftForearmLocalQuat, 'ZXY');
-            child.rotation.copy(rotation);
-            jointInfo = { joint: 'left_lower', angles: child.rotation };
-            // 计算小臂方向向量
-            leftLowerArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(rotation);
-            break;
-          
-          case 'mixamorigRightArm': // 右大臂
-            child.rotation.order = 'ZXY';
-            rotation = new THREE.Euler(
-              -currentRotations.right_upper.y,
-              -currentRotations.right_upper.x,
-              -currentRotations.right_upper.z,
-            );
-            child.rotation.copy(rotation);
-            jointInfo = { joint: 'right_upper', angles: child.rotation };
-            rightUpperArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(rotation);
-            break;
-          case 'mixamorigRightForeArm': // 右小臂
-            child.rotation.order = 'ZXY';
-            const rightUpperWorldRot = new THREE.Euler(
-              -currentRotations.right_upper.y,
-              -currentRotations.right_upper.x,
-              -currentRotations.right_upper.z,
-              'ZXY'
-            );
-            const rightUpperWorldQuat = new THREE.Quaternion().setFromEuler(rightUpperWorldRot);
-            const rightForearmWorldRot = new THREE.Euler(
-              currentRotations.right_lower.y,
-              currentRotations.right_lower.x,
-              -currentRotations.right_lower.z,
-              'ZXY'
-            );
-            const rightForearmWorldQuat = new THREE.Quaternion().setFromEuler(rightForearmWorldRot);
-            const rightForearmLocalQuat = new THREE.Quaternion()
-              .copy(rightUpperWorldQuat)
-              .invert()
-              .multiply(rightForearmWorldQuat);
-            rotation = new THREE.Euler().setFromQuaternion(rightForearmLocalQuat, 'ZXY');
-            child.rotation.copy(rotation);
-            jointInfo = { joint: 'right_lower', angles: child.rotation };
-            rightLowerArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(rotation);
+        switch (name) {
+          case 'mixamorigLeftArm':
+          case 'mixamorigRightArm':
+            {
+              const jn = isRight ? 'right_upper' : 'left_upper';
+              const cr = currentRotations[jn];
+              const mo = manualOffsets[jn] || {x:0, y:0};
+              child.rotation.order = 'XYZ';
+              child.rotation.set(
+                currentArmDown - (cr.x + mo.x),   // X: A-pose + Roll(左右)
+                signYaw * cr.z,                                // Y: Yaw(扭转)
+                (isRight ? -(cr.y + mo.y) : +(cr.y + mo.y))   // Z: Pitch(前后)
+              );
+              jointInfo = { joint: jn, angles: child.rotation };
+              if (isRight) {
+                rightUpperArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(child.rotation);
+              } else {
+                leftUpperArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(child.rotation);
+              }
+            }
             break;
 
-          // ── 腿部骨骼 (V2) — 仅在有数据时驱动 ──
-          case 'mixamorigRightUpLeg':
-            if (!hasLegData) break;
-            child.rotation.order = 'ZXY';
-            rotation = new THREE.Euler(
-              -currentRotations.right_upperLeg.y,
-              -currentRotations.right_upperLeg.x,
-              -currentRotations.right_upperLeg.z,
-              'ZXY'
-            );
-            child.rotation.copy(rotation);
-            jointInfo = { joint: 'right_upperLeg', angles: child.rotation };
-            break;
-          case 'mixamorigRightLeg':
-            if (!hasLegData) break;
-            child.rotation.order = 'ZXY';
-            const _rightUpLegWorldRot = new THREE.Euler(
-              -currentRotations.right_upperLeg.y,
-              -currentRotations.right_upperLeg.x,
-              -currentRotations.right_upperLeg.z,
-              'ZXY'
-            );
-            const _rightUpLegWorldQuat = new THREE.Quaternion().setFromEuler(_rightUpLegWorldRot);
-            const _rightLegWorldRot = new THREE.Euler(
-              currentRotations.right_lowerLeg.y,
-              currentRotations.right_lowerLeg.x,
-              -currentRotations.right_lowerLeg.z,
-              'ZXY'
-            );
-            const _rightLegWorldQuat = new THREE.Quaternion().setFromEuler(_rightLegWorldRot);
-            const _rightLegLocalQuat = new THREE.Quaternion()
-              .copy(_rightUpLegWorldQuat).invert().multiply(_rightLegWorldQuat);
-            rotation = new THREE.Euler().setFromQuaternion(_rightLegLocalQuat, 'ZXY');
-            child.rotation.copy(rotation);
-            jointInfo = { joint: 'right_lowerLeg', angles: child.rotation };
+          case 'mixamorigLeftForeArm':
+          case 'mixamorigRightForeArm':
+            {
+              const jnLower = isRight ? 'right_lower' : 'left_lower';
+              const cr = currentRotations[jnLower];
+              child.rotation.order = 'XYZ';
+              child.rotation.set(
+                0,                               // X: 无
+                signYaw * cr.z,                  // Y: Yaw
+                signRoll * cr.x + (isRight ? +cr.y : -cr.y)  // Z: 左-cr.y 右+cr.y
+              );
+              jointInfo = { joint: jnLower, angles: child.rotation };
+              if (isRight) {
+                rightLowerArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(child.rotation);
+              } else {
+                leftLowerArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(child.rotation);
+              }
+            }
             break;
 
           case 'mixamorigLeftUpLeg':
-            if (!hasLegData) break;
-            child.rotation.order = 'ZXY';
-            rotation = new THREE.Euler(
-              -currentRotations.left_upperLeg.y,
-              -currentRotations.left_upperLeg.x,
-              -currentRotations.left_upperLeg.z,
-              'ZXY'
-            );
-            child.rotation.copy(rotation);
-            jointInfo = { joint: 'left_upperLeg', angles: child.rotation };
-            break;
-          case 'mixamorigLeftLeg':
-            if (!hasLegData) break;
-            child.rotation.order = 'ZXY';
-            const _leftUpLegWorldRot = new THREE.Euler(
-              -currentRotations.left_upperLeg.y,
-              -currentRotations.left_upperLeg.x,
-              -currentRotations.left_upperLeg.z,
-              'ZXY'
-            );
-            const _leftUpLegWorldQuat = new THREE.Quaternion().setFromEuler(_leftUpLegWorldRot);
-            const _leftLegWorldRot = new THREE.Euler(
-              currentRotations.left_lowerLeg.y,
-              currentRotations.left_lowerLeg.x,
-              -currentRotations.left_lowerLeg.z,
-              'ZXY'
-            );
-            const _leftLegWorldQuat = new THREE.Quaternion().setFromEuler(_leftLegWorldRot);
-            const _leftLegLocalQuat = new THREE.Quaternion()
-              .copy(_leftUpLegWorldQuat).invert().multiply(_leftLegWorldQuat);
-            rotation = new THREE.Euler().setFromQuaternion(_leftLegLocalQuat, 'ZXY');
-            child.rotation.copy(rotation);
-            jointInfo = { joint: 'left_lowerLeg', angles: child.rotation };
+          case 'mixamorigRightUpLeg':
+            {
+              const jn = isRight ? 'right_upperLeg' : 'left_upperLeg';
+              const mo = manualOffsets[jn] || {x:0, y:0};
+              if (!hasLegData && mo.x === 0 && mo.y === 0) break;
+              const cr = currentRotations[jn];
+              child.rotation.order = 'XYZ';
+              child.rotation.set(
+                -(cr.y + mo.y),
+                signYaw * cr.z,
+                signRoll * (cr.x + mo.x) + LEG_REST_Z
+              );
+              jointInfo = { joint: jn, angles: child.rotation };
+            }
             break;
 
+          case 'mixamorigLeftLeg':
+          case 'mixamorigRightLeg':
+            {
+              if (!hasLegData) break;
+              const jnLower = isRight ? 'right_lowerLeg' : 'left_lowerLeg';
+              const cr = currentRotations[jnLower];
+              child.rotation.order = 'XYZ';
+              child.rotation.set(
+                -cr.y,                           // X: Pitch (膝屈伸)
+                signYaw * cr.z,                  // Y: Yaw
+                signRoll * cr.x                  // Z: Roll
+              );
+              jointInfo = { joint: jnLower, angles: child.rotation };
+            }
+            break;
+
+          // end of leg cases
         }
         if (jointInfo) {
           const currentAngles = {
@@ -1038,12 +1143,12 @@
         const upperAngles = isLeft ? leftUpperAngles : rightUpperAngles;
         const lowerAngles = isLeft ? leftLowerAngles : rightLowerAngles;
 
-        // 左右摆臂角度（度数）
-        const leftRightAngleDeg = -parseFloat(upperAngles.x || 0) + 90; // 线性映射传感器角度到显示角度
+        // 左右摆臂角度（度数）→ Z分量 (Roll)
+        const leftRightAngleDeg = -parseFloat(upperAngles.x || 0) + 90;
         leftRightAngleSpan.textContent = Math.round(leftRightAngleDeg);
 
-        // 前后摆臂角度（度数）√
-        const frontBackAngleDeg = -parseFloat(upperAngles.z || 0);
+        // 前后摆臂角度（度数）→ Y分量 (Pitch)
+        const frontBackAngleDeg = -parseFloat(upperAngles.y || 0);
         frontBackAngleSpan.textContent = Math.round(frontBackAngleDeg);
 
         // 左右摆臂角度（弧度）√
@@ -1076,9 +1181,9 @@
 
 
       }
-      // 获取左右臂前后摆角度（度数）
-      const leftFrontBack = -parseFloat(leftUpperAngles.z || 0);
-      const rightFrontBack = -parseFloat(rightUpperAngles.z || 0);
+      // 获取左右臂前后摆角度（度数）→ Y分量 (Pitch)
+      const leftFrontBack = -parseFloat(leftUpperAngles.y || 0);
+      const rightFrontBack = -parseFloat(rightUpperAngles.y || 0);
       const leftLeftRight = -parseFloat(leftUpperAngles.x || 0) + 90;
       const rightLeftRight = -parseFloat(rightUpperAngles.x || 0) + 90;
 
@@ -1292,8 +1397,8 @@
       // 更新前后摆臂角度或者幅度的建议
       const frontBackMagOrAngleRecommendationElement = document.getElementById('frontBackMagOrAngleRecommendation');
       // 计算前后摆臂角度和幅度
-      const leftFrontBackAngle = -parseFloat(leftUpperAngles.z || 0);
-      const rightFrontBackAngle = -parseFloat(rightUpperAngles.z || 0);
+      const leftFrontBackAngle = -parseFloat(leftUpperAngles.y || 0);
+      const rightFrontBackAngle = -parseFloat(rightUpperAngles.y || 0);
       const leftFrontBackMag = upperArmLength * THREE.MathUtils.degToRad(leftFrontBackAngle);
       const rightFrontBackMag = upperArmLength * THREE.MathUtils.degToRad(rightFrontBackAngle);
 
@@ -1438,6 +1543,10 @@
     // 处理接收到的数据，更新目标旋转（弧度）
     // 处理接收到的数据，更新3D模型并触发波形图更新事件
     function handleMessage(msg) {
+      // 姿态切换: tpose → 手臂水平, apose → 手臂下垂
+      if (msg.pose === 'tpose') currentArmDown = ARM_DOWN_TPOSE;
+      else if (msg.pose === 'apose') currentArmDown = ARM_DOWN_APOSE;
+
       const isRightData = msg.source === 'RIGHT' && Array.isArray(msg.data);
       const isLeftData = msg.source === 'LEFT' && Array.isArray(msg.data);
 
@@ -1539,19 +1648,126 @@
       };
     }
 
-    // 新增复位按钮点击事件
-    document.addEventListener('DOMContentLoaded', function () {
-      const resetBtn = document.getElementById('resetDeviceBtn');
-      if (resetBtn) {
-        resetBtn.addEventListener('click', function () {
-          if (bridgeSocket && bridgeSocket.readyState === WebSocket.OPEN) {
-            bridgeSocket.send(JSON.stringify({ type: 'command', command: 'RESET', target: 'ALL' }));
-            console.log('已发送复位命令到BLE桥接器');
+    // ── 控制面板浮层 ──
+    const ctrlOverlay = document.getElementById('ctrl-overlay');
+    const ctrlToggle = document.getElementById('ctrl-toggle');
+    const ctrlClose = document.getElementById('ctrl-close');
+    ctrlToggle.addEventListener('click', () => ctrlOverlay.classList.add('open'));
+    ctrlClose.addEventListener('click', () => ctrlOverlay.classList.remove('open'));
+    // 滑块直接设置 targetRotations
+    ctrlOverlay.querySelectorAll('input[type=range]').forEach(slider => {
+      const joint = slider.dataset.j;
+      const axis = slider.dataset.a;
+      const valSpan = slider.nextElementSibling;
+      slider.addEventListener('input', () => {
+        const val = parseFloat(slider.value);
+        valSpan.textContent = val + '°';
+        targetRotations[joint][axis] = THREE.MathUtils.degToRad(val);
+        if (joint.includes('Leg')) hasLegData = true;
+      });
+    });
+    // 预设按钮
+    const ctrlPresets = document.getElementById('ctrl-presets');
+    [
+      ['归零', {}],
+      ['T-Pose', {pose:'tpose'}],
+      ['右腿前抬', {right_upperLeg: {x:0, y:60, z:0}}],
+      ['左腿前抬', {left_upperLeg: {x:0, y:60, z:0}}],
+      ['右臂前抬', {right_upper: {x:0, y:90, z:0}}],
+      ['左臂前抬', {left_upper: {x:0, y:90, z:0}}],
+    ].forEach(([label, preset]) => {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        for (const k in targetRotations) {
+          if (targetRotations[k]) targetRotations[k] = {x:0, y:0, z:0};
+        }
+        if (preset.pose === 'tpose') currentArmDown = ARM_DOWN_TPOSE;
+        else currentArmDown = ARM_DOWN_APOSE;
+        for (const [j, v] of Object.entries(preset)) {
+          if (j === 'pose') continue;
+          targetRotations[j] = {x: THREE.MathUtils.degToRad(v.x||0), y: THREE.MathUtils.degToRad(v.y||0), z: THREE.MathUtils.degToRad(v.z||0)};
+          if (j.includes('Leg')) hasLegData = true;
+        }
+        // 同步滑块
+        ctrlOverlay.querySelectorAll('input[type=range]').forEach(sl => {
+          const t = targetRotations[sl.dataset.j];
+          if (t) {
+            const deg = Math.round(THREE.MathUtils.radToDeg(t[sl.dataset.a] || 0));
+            sl.value = deg;
+            sl.nextElementSibling.textContent = deg + '°';
           } else {
-            console.warn('BLE桥接器未连接，无法发送复位命令');
+            sl.value = 0;
+            sl.nextElementSibling.textContent = '0°';
           }
         });
+      });
+      ctrlPresets.appendChild(btn);
+    });
+
+    // ── 无硬件手动控制 ──
+    const manualOffsets = {
+      left_upper: {x:0,y:0}, right_upper: {x:0,y:0},
+      left_upperLeg: {x:0,y:0}, right_upperLeg: {x:0,y:0}
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const resetBtn = document.getElementById('resetDeviceBtn');
+      if (resetBtn) resetBtn.addEventListener('click', () => {
+        for (const k in manualOffsets) manualOffsets[k] = {x:0,y:0};
+        if (bridgeSocket && bridgeSocket.readyState === WebSocket.OPEN)
+          bridgeSocket.send(JSON.stringify({type:'command',command:'RESET',target:'ALL'}));
+      });
+      document.querySelectorAll('.man-btn').forEach(btn => {
+        const joint = btn.dataset.joint, axis = btn.dataset.axis;
+        const val = parseFloat(btn.dataset.val);
+        const down = (e) => { e.preventDefault(); manualOffsets[joint][axis] = THREE.MathUtils.degToRad(val); btn.classList.add('active'); };
+        const up = () => { manualOffsets[joint][axis] = 0; btn.classList.remove('active'); };
+        btn.addEventListener('mousedown', down);
+        btn.addEventListener('mouseup', up);
+        btn.addEventListener('mouseleave', up);
+        btn.addEventListener('touchstart', down);
+        btn.addEventListener('touchend', up);
+      });
+
+      // 走路模拟开关 (用 rAF 同步渲染，消除抖动)
+      let walkRafId = null, walkStart = 0, walking = false;
+      const walkBtn = document.getElementById('walkToggleBtn');
+      const WALK_FREQ = 1.0;
+      const armAmp = THREE.MathUtils.degToRad(35);
+      const legAmp = THREE.MathUtils.degToRad(30);
+      const kneeAmp = THREE.MathUtils.degToRad(45);
+      function walkLoop(now) {
+        const t = (now - walkStart) / 1000;
+        const L = t * WALK_FREQ * Math.PI * 2, R = L + Math.PI;
+        const eAmp = THREE.MathUtils.degToRad(10);
+        // 上臂: 前后摆
+        targetRotations.left_upper.y = -Math.sin(L) * armAmp;
+        targetRotations.right_upper.y = -Math.sin(R) * armAmp;
+        // 下臂: 肘屈伸 (臂后摆时弯曲, 与上臂反向)
+        targetRotations.left_lower.y = -Math.sin(L) * eAmp;
+        targetRotations.right_lower.y = -Math.sin(R) * eAmp;
+        // 大腿: 前后迈 (同侧与臂反向=交叉步态)
+        targetRotations.left_upperLeg.y = -Math.sin(R) * legAmp;
+        targetRotations.right_upperLeg.y = -Math.sin(L) * legAmp;
+        // 小腿: 膝屈伸
+        targetRotations.left_lowerLeg.y = Math.sin(R) * kneeAmp;
+        targetRotations.right_lowerLeg.y = Math.sin(L) * kneeAmp;
+        hasLegData = true;
+        walkRafId = requestAnimationFrame(walkLoop);
       }
+      walkBtn.addEventListener('click', () => {
+        walking = !walking;
+        if (walking) {
+          walkBtn.classList.add('walk-on');
+          walkStart = performance.now();
+          walkRafId = requestAnimationFrame(walkLoop);
+        } else {
+          walkBtn.classList.remove('walk-on');
+          cancelAnimationFrame(walkRafId);
+          for (const k in targetRotations)
+            if (k.includes('upper') || k.includes('lower')) targetRotations[k].y = 0;
+        }
+      });
     });
 
     function connectWS() {
@@ -1589,7 +1805,8 @@
       BONE_NAMES.forEach(function (name) {
         // Inner dot
         var geo = new THREE.SphereGeometry(DOT_SIZE, 16, 16);
-        var mat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.8, depthTest: false, depthWrite: false });
+        const isLeft = name.includes('Left'); const color = isLeft ? 0xffaa00 : 0xaa44ff;
+        var mat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.8, depthTest: false, depthWrite: false });
         var dot = new THREE.Mesh(geo, mat);
         dot.renderOrder = 999;
         scene.add(dot);
@@ -1597,7 +1814,7 @@
 
         // Outer glow
         var gGeo = new THREE.SphereGeometry(DOT_SIZE * 2.5, 16, 16);
-        var gMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.25, depthTest: false, depthWrite: false });
+        var gMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.25, depthTest: false, depthWrite: false });
         var glow = new THREE.Mesh(gGeo, gMat);
         glow.renderOrder = 998;
         scene.add(glow);
@@ -1776,6 +1993,42 @@
     loadFBX();
     connectWS();
   </script>
+
+<!-- ── 控制面板浮层 ── -->
+<div id="ctrl-overlay">
+  <button id="ctrl-close">&#10005;</button>
+  <h4 style="color:#00e5ff;margin-bottom:12px">关节控制</h4>
+  <div class="ctrl-presets" id="ctrl-presets"></div>
+  <div class="ctrl-section l"><h4>左臂上</h4>
+    <div class="ctrl-row"><span>前后</span><input type="range" min="-90" max="90" value="0" data-j="left_upper" data-a="y"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>左右</span><input type="range" min="-40" max="40" value="0" data-j="left_upper" data-a="x"><span class="v">0°</span></div>
+  </div>
+  <div class="ctrl-section l"><h4>左臂下</h4>
+    <div class="ctrl-row"><span>肘屈</span><input type="range" min="-80" max="0" value="0" data-j="left_lower" data-a="y"><span class="v">0°</span></div>
+  </div>
+  <div class="ctrl-section r"><h4>右臂上</h4>
+    <div class="ctrl-row"><span>前后</span><input type="range" min="-90" max="90" value="0" data-j="right_upper" data-a="y"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>左右</span><input type="range" min="-40" max="40" value="0" data-j="right_upper" data-a="x"><span class="v">0°</span></div>
+  </div>
+  <div class="ctrl-section r"><h4>右臂下</h4>
+    <div class="ctrl-row"><span>肘屈</span><input type="range" min="-80" max="0" value="0" data-j="right_lower" data-a="y"><span class="v">0°</span></div>
+  </div>
+  <div class="ctrl-section l"><h4>左腿上</h4>
+    <div class="ctrl-row"><span>前后</span><input type="range" min="-90" max="90" value="0" data-j="left_upperLeg" data-a="y"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>左右</span><input type="range" min="-30" max="30" value="0" data-j="left_upperLeg" data-a="x"><span class="v">0°</span></div>
+  </div>
+  <div class="ctrl-section r"><h4>右腿上</h4>
+    <div class="ctrl-row"><span>前后</span><input type="range" min="-90" max="90" value="0" data-j="right_upperLeg" data-a="y"><span class="v">0°</span></div>
+    <div class="ctrl-row"><span>左右</span><input type="range" min="-30" max="30" value="0" data-j="right_upperLeg" data-a="x"><span class="v">0°</span></div>
+  </div>
+  <div class="ctrl-section l"><h4>左腿下</h4>
+    <div class="ctrl-row"><span>膝屈</span><input type="range" min="0" max="90" value="0" data-j="left_lowerLeg" data-a="y"><span class="v">0°</span></div>
+  </div>
+  <div class="ctrl-section r"><h4>右腿下</h4>
+    <div class="ctrl-row"><span>膝屈</span><input type="range" min="0" max="90" value="0" data-j="right_lowerLeg" data-a="y"><span class="v">0°</span></div>
+  </div>
+</div>
+<button id="ctrl-toggle">关节控制</button>
 </body>
 
 </html>

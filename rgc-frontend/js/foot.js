@@ -672,8 +672,8 @@ function processCombinedMessage(combinedMsg, foot) {
       heatHistory.shift();
     }
 
-    // 绘图与分析（保留原展示逻辑调用）
-    const footHistory = heatHistory.filter(e => e.foot === 'left'); // 默认使用左脚数据进行趋势分析
+    // 绘图与分析（使用当前脚的历史数据进行趋势分析）
+    const footHistory = heatHistory.filter(e => e.foot === foot);
     drawTrend(footHistory); // 绘制趋势图
     analyzeGaitStaticOrDynamic(heatData, footHistory, now); // 步态分析
   }
