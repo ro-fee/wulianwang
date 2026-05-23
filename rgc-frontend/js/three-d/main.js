@@ -544,11 +544,9 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
       window._dbgFrame++;
       if (window._dbgFrame % 100 === 1) {
         for (const [name, q] of restStore) {
-          // 找到对应骨骼
-          let found = null;
-          model.traverse(c => { if (c.name === name && c.isBone) found = c; });
-          if (found) {
-            const euler = new THREE.Euler().setFromQuaternion(found.quaternion, 'XYZ');
+          const bone = getBone(boneCache, name);
+          if (bone) {
+            const euler = new THREE.Euler().setFromQuaternion(bone.quaternion, 'XYZ');
             console.log(`[F${window._dbgFrame}] ${name}: rot=(${THREE.MathUtils.radToDeg(euler.x).toFixed(1)},${THREE.MathUtils.radToDeg(euler.y).toFixed(1)},${THREE.MathUtils.radToDeg(euler.z).toFixed(1)})°`);
           }
         }
@@ -567,147 +565,56 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
       const rightUpperArmVector = new THREE.Vector3(0, -1, 0);
       const rightLowerArmVector = new THREE.Vector3(0, -1, 0);
 
-      model.traverse(child => {
-        let jointInfo = null;
-        let rotation;
-        const name = child.name;
-        const restQuat = restStore.get(name);
-        if (!restQuat) return;  // 跳过非动画骨骼
+      // ── Rig 驱动的骨骼更新 (替代 model.traverse + switch) ──
+      for (const entry of mixamoRig.boneMap) {
+        const bone = getBone(boneCache, entry.boneName);
+        if (!bone) continue;
 
-        // 传感器欧拉角 → 四元数 (ZXY 顺序: Z=侧向/Roll, X=前后/Pitch, Y=扭转/Yaw)
-        // 左侧: Roll/Yaw 取负; 右侧: Roll/Yaw 取正
-        const isRight = name.startsWith('mixamorigRight');
-        const signRoll = isRight ? 1 : -1;
-        const signYaw  = isRight ? 1 : -1;
+        const jn = entry.jointKey;
+        const isLeg = jn.includes('Leg');
+        const mo = manualOffsets[jn] || {x:0, y:0};
+        if (isLeg && !hasLegData && mo.x === 0 && mo.y === 0) continue;
 
-        switch (name) {
-          case 'mixamorigLeftArm':
-          case 'mixamorigRightArm':
-            {
-              const jn = isRight ? 'right_upper' : 'left_upper';
-              const cr = currentRotations[jn];
-              const mo = manualOffsets[jn] || {x:0, y:0};
-              child.rotation.order = 'XYZ';
-              child.rotation.set(
-                currentArmDown - (cr.x + mo.x),   // X: A-pose + Roll(左右)
-                signYaw * cr.z,                                // Y: Yaw(扭转)
-                (isRight ? -(cr.y + mo.y) : +(cr.y + mo.y))   // Z: Pitch(前后)
-              );
-              jointInfo = { joint: jn, angles: child.rotation };
-              if (isRight) {
-                rightUpperArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(child.rotation);
-              } else {
-                leftUpperArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(child.rotation);
-              }
-            }
-            break;
+        const cr = currentRotations[jn];
+        if (!cr) continue;
 
-          case 'mixamorigLeftForeArm':
-          case 'mixamorigRightForeArm':
-            {
-              const jnLower = isRight ? 'right_lower' : 'left_lower';
-              const cr = currentRotations[jnLower];
-              child.rotation.order = 'XYZ';
-              child.rotation.set(
-                0,                               // X: 无
-                signYaw * cr.z,                  // Y: Yaw
-                signRoll * cr.x + (isRight ? +cr.y : -cr.y)  // Z: 左-cr.y 右+cr.y
-              );
-              jointInfo = { joint: jnLower, angles: child.rotation };
-              if (isRight) {
-                rightLowerArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(child.rotation);
-              } else {
-                leftLowerArmVector.copy(new THREE.Vector3(0, -1, 0)).applyEuler(child.rotation);
-              }
-            }
-            break;
-
-          case 'mixamorigLeftUpLeg':
-          case 'mixamorigRightUpLeg':
-            {
-              const jn = isRight ? 'right_upperLeg' : 'left_upperLeg';
-              const mo = manualOffsets[jn] || {x:0, y:0};
-              if (!hasLegData && mo.x === 0 && mo.y === 0) break;
-              const cr = currentRotations[jn];
-              child.rotation.order = 'XYZ';
-              child.rotation.set(
-                -(cr.y + mo.y),
-                signYaw * cr.z,
-                signRoll * (cr.x + mo.x) + LEG_REST_Z
-              );
-              jointInfo = { joint: jn, angles: child.rotation };
-            }
-            break;
-
-          case 'mixamorigLeftLeg':
-          case 'mixamorigRightLeg':
-            {
-              if (!hasLegData) break;
-              const jnLower = isRight ? 'right_lowerLeg' : 'left_lowerLeg';
-              const cr = currentRotations[jnLower];
-              child.rotation.order = 'XYZ';
-              child.rotation.set(
-                -cr.y,                           // X: Pitch (膝屈伸)
-                signYaw * cr.z,                  // Y: Yaw
-                signRoll * cr.x                  // Z: Roll
-              );
-              jointInfo = { joint: jnLower, angles: child.rotation };
-            }
-            break;
-
-          // end of leg cases
+        // 用 Rig 映射表计算骨骼 Euler (替代散落的 isRight ? -x : +x)
+        const semantic = {
+          flexion:   cr.y + mo.y,     // Pitch → flexion
+          abduction: cr.x + mo.x,     // Roll → abduction
+          yaw:       cr.z             // Yaw
+        };
+        const euler = mixamoRig.poseToBoneEuler(semantic, entry);
+        // A-pose 手臂特殊处理
+        if (jn === 'left_upper' || jn === 'right_upper') {
+          euler.x = currentArmDown - (cr.x + mo.x);
+          euler.z = entry.side === 'RIGHT' ? -(cr.y + mo.y) : +(cr.y + mo.y);
         }
-        if (jointInfo) {
-          const currentAngles = {
-            x: THREE.MathUtils.radToDeg(jointInfo.angles.x).toFixed(1),
-            y: THREE.MathUtils.radToDeg(jointInfo.angles.y).toFixed(1),
-            z: THREE.MathUtils.radToDeg(jointInfo.angles.z).toFixed(1)
-          };
 
-          switch (jointInfo.joint) {
-            case 'left_upper':
-              leftUpperAngles.x = currentAngles.x;
-              leftUpperAngles.y = currentAngles.y;
-              leftUpperAngles.z = currentAngles.z;
-              break;
-            case 'left_lower':
-              leftLowerAngles.x = currentAngles.x;
-              leftLowerAngles.y = currentAngles.y;
-              leftLowerAngles.z = currentAngles.z;
-              break;
-            case 'right_upper':
-              rightUpperAngles.x = currentAngles.x;
-              rightUpperAngles.y = currentAngles.y;
-              rightUpperAngles.z = currentAngles.z;
-              break;
-            case 'right_lower':
-              rightLowerAngles.x = currentAngles.x;
-              rightLowerAngles.y = currentAngles.y;
-              rightLowerAngles.z = currentAngles.z;
-              break;
-            case 'left_upperLeg':
-              leftUpperLegAngles.x = currentAngles.x;
-              leftUpperLegAngles.y = currentAngles.y;
-              leftUpperLegAngles.z = currentAngles.z;
-              break;
-            case 'left_lowerLeg':
-              leftLowerLegAngles.x = currentAngles.x;
-              leftLowerLegAngles.y = currentAngles.y;
-              leftLowerLegAngles.z = currentAngles.z;
-              break;
-            case 'right_upperLeg':
-              rightUpperLegAngles.x = currentAngles.x;
-              rightUpperLegAngles.y = currentAngles.y;
-              rightUpperLegAngles.z = currentAngles.z;
-              break;
-            case 'right_lowerLeg':
-              rightLowerLegAngles.x = currentAngles.x;
-              rightLowerLegAngles.y = currentAngles.y;
-              rightLowerLegAngles.z = currentAngles.z;
-              break;
-          }
+        bone.rotation.order = 'XYZ';
+        bone.rotation.set(euler.x, euler.y, euler.z);
+
+        let jointInfo = { joint: jn, angles: bone.rotation };
+        // 更新方向向量 (用于肘角计算)
+        if (jn === 'left_upper') leftUpperArmVector.copy(new THREE.Vector3(0,-1,0)).applyEuler(bone.rotation);
+        if (jn === 'right_upper') rightUpperArmVector.copy(new THREE.Vector3(0,-1,0)).applyEuler(bone.rotation);
+        if (jn === 'left_lower') leftLowerArmVector.copy(new THREE.Vector3(0,-1,0)).applyEuler(bone.rotation);
+        if (jn === 'right_lower') rightLowerArmVector.copy(new THREE.Vector3(0,-1,0)).applyEuler(bone.rotation);
+
+        // 存储关节角度到对应变量 (简化: 对象键映射)
+        const angleStore = {
+          left_upper: leftUpperAngles, left_lower: leftLowerAngles,
+          right_upper: rightUpperAngles, right_lower: rightLowerAngles,
+          left_upperLeg: leftUpperLegAngles, left_lowerLeg: leftLowerLegAngles,
+          right_upperLeg: rightUpperLegAngles, right_lowerLeg: rightLowerLegAngles,
+        };
+        const store = angleStore[jn];
+        if (store) {
+          store.x = THREE.MathUtils.radToDeg(bone.rotation.x).toFixed(1);
+          store.y = THREE.MathUtils.radToDeg(bone.rotation.y).toFixed(1);
+          store.z = THREE.MathUtils.radToDeg(bone.rotation.z).toFixed(1);
         }
-      });
+      }  // end for (rig boneMap)
 
       const valueMaxLength = 6;
 
