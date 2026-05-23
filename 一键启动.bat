@@ -10,8 +10,20 @@ echo   ║      东北大学 · 大创项目                       ║
 echo   ╚══════════════════════════════════════════════╝
 echo.
 
+:: ── 0. 清理上次可能残留的进程 ──
+echo [0/5] 清理残留进程...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr "127.0.0.1:8765" ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%a >nul 2>&1
+    echo        已终止残留进程 PID=%%a
+)
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr "127.0.0.1:5502" ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%a >nul 2>&1
+    echo        已终止残留进程 PID=%%a
+)
+echo        清理完成
+
 :: ── 1. 检查 Python ──
-echo [1/4] 检查 Python 环境...
+echo [1/5] 检查 Python 环境...
 python --version >nul 2>&1
 if errorlevel 1 (
     echo [错误] 未找到 Python，请安装 Python 3.10+
@@ -24,7 +36,7 @@ for /f "tokens=2" %%v in ('python --version 2^>^&1') do echo        已检测: P
 
 :: ── 2. 检查/安装依赖 ──
 echo.
-echo [2/4] 检查依赖包...
+echo [2/5] 检查依赖包...
 python -c "import bleak, websockets, openai" >nul 2>&1
 if errorlevel 1 (
     echo        正在安装依赖包...
@@ -41,13 +53,13 @@ if errorlevel 1 (
 
 :: ── 3. API Key ──
 echo.
-echo [3/4] 设置 DeepSeek API Key...
+echo [3/5] 设置 DeepSeek API Key...
 set DEEPSEEK_API_KEY=sk-e1e178ed79244558b5e8f4da7f166cae
 echo        API Key 已配置
 
 :: ── 4. 启动桥接器 ──
 echo.
-echo [4/4] 启动桥接器...
+echo [4/5] 启动桥接器...
 echo.
 echo   前端页面: http://127.0.0.1:5502/rgc-frontend/
 echo   BLE 数据: ws://127.0.0.1:8765

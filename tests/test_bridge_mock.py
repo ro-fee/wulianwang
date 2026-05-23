@@ -18,6 +18,7 @@ RGC Mock Bridge — 无硬件全模拟测试服务器
 
 import argparse
 import asyncio
+import atexit
 import json
 import math
 import os
@@ -57,6 +58,28 @@ N_PRESSURES = 18
 # WebSocket 连接池
 connected_clients: set = set()
 latest_packets: dict[str, dict] = {}  # "LEFT" | "RIGHT" → 最新 JSON
+_http_server: "ThreadingHTTPServer | None" = None
+_cleanup_done = False
+
+
+def _cleanup():
+    """atexit/signal 清理钩子，确保端口释放"""
+    global _cleanup_done, _http_server
+    if _cleanup_done:
+        return
+    _cleanup_done = True
+    if _http_server is not None:
+        try:
+            _http_server.shutdown()
+        except Exception:
+            pass
+    print("\n[MOCK] 已清理，端口已释放。")
+
+
+atexit.register(_cleanup)
+# 注意: 不覆盖 SIGINT handler，保留 Python 默认的 KeyboardInterrupt 行为
+# _cleanup 通过 atexit 在进程退出时自动触发
+# 点×残留问题由 bat 文件的启动前清理兜底
 
 
 # ═══════════════════════════════════════════
@@ -273,10 +296,12 @@ class MockHTTPHandler(SimpleHTTPRequestHandler):
 
 
 def start_http_server(host: str, port: int) -> ThreadingHTTPServer:
+    global _http_server
     server = ThreadingHTTPServer((host, port), MockHTTPHandler)
     server.allow_reuse_address = True
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
+    _http_server = server
     return server
 
 
