@@ -88,8 +88,9 @@
         const msg = JSON.parse(e.data);
         if (msg.source && Array.isArray(msg.data) && msg.data.length >= 24) {
           const offset = msg.source === 'LEFT' ? 0 : N_PER_FOOT;
+          const pressureStart = msg.data.length - 18; // V1=6, V2=12
           for (let i = 0; i < N_PER_FOOT; i++) {
-            const raw = msg.data[6 + i] || 0;
+            const raw = msg.data[pressureStart + i] || 0;
             // Normalize: /50 means 50 = full bright
             const v = Math.min(1, Math.max(0, raw / 50));
             target[offset + i] = v;

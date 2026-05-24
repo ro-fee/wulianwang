@@ -1195,6 +1195,7 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
     const ctrlPresets = document.getElementById('ctrl-presets');
     [
       ['归零', {}],
+      ['校准', {pose:'calibrate'}],
       ['T-Pose', {pose:'tpose'}],
       ['右腿前抬', {right_upperLeg: {x:0, y:60, z:0}}],
       ['左腿前抬', {left_upperLeg: {x:0, y:60, z:0}}],
@@ -1203,11 +1204,18 @@ import { applyPoseToSkeleton } from './skeleton/skeleton-driver.js';
     ].forEach(([label, preset]) => {
       const btn = document.createElement('button');
       btn.textContent = label;
+      if (preset.pose === 'calibrate') btn.className = 'cal-btn';
       btn.addEventListener('click', () => {
         for (const k in targetRotations) {
           if (targetRotations[k]) targetRotations[k] = {x:0, y:0, z:0};
         }
         if (preset.pose === 'tpose') currentArmDown = ARM_DOWN_TPOSE;
+        else if (preset.pose === 'calibrate') {
+          currentArmDown = ARM_DOWN_APOSE;
+          for (const k in manualOffsets) manualOffsets[k] = {x:0,y:0};
+          if (bridgeSocket && bridgeSocket.readyState === WebSocket.OPEN)
+            bridgeSocket.send(JSON.stringify({cmd:'calibrate'}));
+        }
         else currentArmDown = ARM_DOWN_APOSE;
         for (const [j, v] of Object.entries(preset)) {
           if (j === 'pose') continue;

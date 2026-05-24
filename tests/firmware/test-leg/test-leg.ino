@@ -18,7 +18,7 @@
 
 // ── ESP-NOW 目标: 腰间 S3 MAC ⚠️ 烧录前必须替换为实际 MAC！──
 // 获取方式: 先烧录 hub-waist.ino → 串口监视器(115200) → 复制打印的 MAC 地址
-static const uint8_t WAIST_MAC[] = {0x28, 0x84, 0x85, 0x6D, 0x68, 0x0C};
+static const uint8_t WAIST_MAC[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 // ── 模拟参数 ──
 static const unsigned long SEND_INTERVAL_MS = 30;   // 33Hz, 与正式版一致

@@ -135,7 +135,19 @@ async def websocket_handler(websocket, path=None):
     try:
         for packet in latest_packets.values():
             await websocket.send(packet)
-        await websocket.wait_closed()
+
+        async for message in websocket:
+            try:
+                msg = json.loads(message)
+                cmd = msg.get("cmd", "")
+                if cmd == "calibrate":
+                    for fwd in ble_forwarders.values():
+                        await fwd.send_command("CALIBRATE")
+                    await websocket.send(json.dumps({"cmd": "calibrate", "status": "sent"}))
+            except json.JSONDecodeError:
+                pass
+            except websockets.exceptions.ConnectionClosed:
+                break
     finally:
         web_clients.discard(websocket)
         print(f"[WEB] 页面已断开，当前页面数: {len(web_clients)}")
@@ -212,6 +224,8 @@ def parse_rg_packet(data):
     return {"data": angles + pressures}
 
 
+ble_forwarders = {}  # source → BleForwarder
+
 class BleForwarder:
     def __init__(self, source, device_name):
         self.source = source
@@ -220,6 +234,17 @@ class BleForwarder:
         self.loop = None
         self.disconnected = None
         self.packet_count = 0
+        self._client = None
+
+    async def send_command(self, cmd: str):
+        if self._client and self._client.is_connected:
+            try:
+                await self._client.write_gatt_char(BLE_DATA_CHAR_UUID, cmd.encode())
+                print(f"[CMD] 已发送 '{cmd}' → {self.device_name}")
+                return True
+            except Exception as e:
+                print(f"[CMD] 发送失败: {e}")
+        return False
 
     async def run_forever(self):
         self.loop = asyncio.get_running_loop()
@@ -258,6 +283,7 @@ class BleForwarder:
         print(f"[BLE-{self.source}] 连接 {self.device_name} ({device.address}) ...")
         try:
             async with BleakClient(device, disconnected_callback=on_disconnect) as client:
+                self._client = client
                 await client.start_notify(BLE_DATA_CHAR_UUID, self.on_notification)
                 print(f"[BLE-{self.source}] 已连接并订阅通知")
                 await self.disconnected.wait()
@@ -307,11 +333,13 @@ class BleForwarder:
                 parsed["source"] = self.source
                 self.packet_count += 1
                 if self.packet_count % 20 == 1:
-                    angle_count = min(6, len(parsed['data']) - 18)
-                    print(f"[BLE-{self.source}] 收到数据包 #{self.packet_count} "
-                          f"(V{version}), "
-                          f"角度: {[parsed['data'][i] for i in range(angle_count)]}, "
-                          f"压力[{len(parsed['data']) - angle_count}个]")
+                    data_arr = parsed['data']
+                    arm_angles = [f"{data_arr[i]:.1f}" for i in range(6)]
+                    leg_angles = [f"{data_arr[i]:.1f}" for i in range(6, 12)]
+                    print(f"[BLE-{self.source}] #{self.packet_count} (V{version}) "
+                          f"手臂: [{', '.join(arm_angles)}] "
+                          f"腿部: [{', '.join(leg_angles)}] "
+                          f"压力[{len(data_arr) - 12}个]")
                 if self.loop:
                     self.loop.call_soon_threadsafe(
                         lambda p=parsed: asyncio.create_task(broadcast_packet(p))
@@ -339,6 +367,8 @@ async def run_bridge(args):
 
     left_forwarder = BleForwarder("LEFT", args.left_name)
     right_forwarder = BleForwarder("RIGHT", args.right_name)
+    ble_forwarders["LEFT"] = left_forwarder
+    ble_forwarders["RIGHT"] = right_forwarder
 
     async with websockets.serve(websocket_handler, args.ws_host, args.ws_port):
         await asyncio.gather(

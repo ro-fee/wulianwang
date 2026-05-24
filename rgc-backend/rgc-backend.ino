@@ -1,46 +1,21 @@
 #include <Arduino.h>
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEClient.h>
 #include <HardwareSerial.h>
 #include <math.h>
 #include <esp_now.h>
 #include <WiFi.h>
 
-// #define LEFT // 根据实际硬件定义LEFT/RIGHT
+// #define LEFT
 #define RIGHT
 
-// ── 压力鞋垫 BLE Client ──
-static BLEUUID sensorServiceUUID("0000fff0-0000-1000-8000-00805f9b34fb");
-static BLEUUID sensorNotifyUUID("0000fff1-0000-1000-8000-00805f9b34fb");
-
-#ifdef LEFT
-static BLEAddress targetAddress("FF:24:08:20:53:BD"); // 左足
-#else
-static BLEAddress targetAddress("FF:23:10:16:02:EA"); // 右足
-#endif
-
 // ── ESP-NOW 目标: 腰间 S3 MAC (烧录前替换为实际 MAC 地址！) ──
-// 获取方式: 先烧录 hub-waist.ino → 串口监视器(115200) → 复制打印的 MAC 地址
-// ESP-NOW 不支持广播地址，使用 FF:FF:FF:FF:FF:FF 将导致通信失败
-static const uint8_t WAIST_MAC[] = {0xA0, 0xDD, 0xCC, 0xDD, 0xEE, 0xFF}; // ← 替换为实际 MAC
+static const uint8_t WAIST_MAC[] = {0x28, 0x84, 0x85, 0x6D, 0x68, 0x0C}; // ← 替换为实际 MAC
 
-// ── ESP-NOW 发送间隔 ──
 static const unsigned long ESP_NOW_SEND_INTERVAL_MS = 30;
 
-// ── 压力鞋垫 BLE Client ──
-BLEClient *pClient = nullptr;
-BLERemoteCharacteristic *pNotifyCharacteristic = nullptr;
+// ── 手臂角度 (6 个) ──
+float armAngles[6] = {0};
 
-const size_t BUFFER_SIZE = 100;
-uint8_t rx_buffer[BUFFER_SIZE];
-size_t rx_index = 0;
-
-const size_t PRESSURE_ARRAY_SIZE = 18;
-uint16_t pressure[PRESSURE_ARRAY_SIZE];
-float AnglePressure[24] = {0};  // 6 手臂角度 + 18 压力
-
-// ── JY901S IMU 手臂 ──
+// ── JY901S IMU ──
 struct ImuData {
   float roll, pitch, yaw;
   bool newData;
@@ -63,76 +38,28 @@ float sum_roll_upper = 0.0, sum_pitch_upper = 0.0, sum_yaw_upper = 0.0;
 float sum_roll_lower = 0.0, sum_pitch_lower = 0.0, sum_yaw_lower = 0.0;
 int sample_count = 10;
 
-// ── ESP-NOW 发送 ──
+// ── ESP-NOW ──
 static unsigned long lastSendMs = 0;
 esp_now_peer_info_t peerInfo;
+volatile bool calibrateRequested = false;
 
-// ── ESP-NOW 数据包: 肘部 → 腰间 ──
+// ESP-NOW 数据包: 肘部 → 腰间 (仅手臂角度，压力由腰间 Hub 直连鞋垫收取)
 struct __attribute__((packed)) ArmEspNowPacket {
   uint8_t header;        // 0x41 = 'A'
   uint8_t side;          // 'L' or 'R'
   int16_t angles[6];     // 上臂[3] + 下臂[3], 度×100
-  uint16_t pressures[18];
+  uint16_t checksum;
+};
+
+// ESP-NOW 命令包: 腰间 → 卫星
+struct __attribute__((packed)) EspNowCmd {
+  uint8_t header;   // 0x43 = 'C'
+  uint8_t cmd;      // 'R' = RESET, 'C' = CALIBRATE
   uint16_t checksum;
 };
 
 // ═══════════════════════════════════════════
-// 压力鞋垫 BLE 回调 (不变)
-// ═══════════════════════════════════════════
-void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
-                    uint8_t *pData, size_t length, bool isNotify) {
-  for (size_t i = 0; i < length; ++i) {
-    if (rx_index < BUFFER_SIZE)
-      rx_buffer[rx_index++] = pData[i];
-    else {
-      rx_index = 0;
-      Serial.println("Buffer overflow!");
-    }
-  }
-
-  while (rx_index >= 39) {
-    if (rx_buffer[0] != 0xAA) {
-      memmove(rx_buffer, rx_buffer + 1, rx_index - 1);
-      rx_index--;
-      continue;
-    }
-    uint8_t calcSum = 0;
-    for (size_t i = 0; i < 38; ++i) calcSum += rx_buffer[i];
-    if (calcSum != rx_buffer[38]) {
-      memmove(rx_buffer, rx_buffer + 1, rx_index - 1);
-      rx_index--;
-      continue;
-    }
-    for (size_t i = 0; i < PRESSURE_ARRAY_SIZE; ++i) {
-      pressure[i] = (rx_buffer[2 + 2 * i] << 8) | rx_buffer[3 + 2 * i];
-      AnglePressure[6 + i] = pressure[i];
-    }
-    memmove(rx_buffer, rx_buffer + 39, rx_index - 39);
-    rx_index -= 39;
-  }
-}
-
-void reconnectSensorBle() {
-  Serial.println("Reconnecting sensor BLE...");
-  if (pClient) { pClient->disconnect(); delete pClient; pClient = nullptr; }
-  pClient = BLEDevice::createClient();
-  if (pClient->connect(targetAddress)) {
-    Serial.println("Sensor BLE reconnected.");
-    BLERemoteService *pSvc = pClient->getService(sensorServiceUUID);
-    if (pSvc) {
-      pNotifyCharacteristic = pSvc->getCharacteristic(sensorNotifyUUID);
-      if (pNotifyCharacteristic && pNotifyCharacteristic->canNotify()) {
-        pNotifyCharacteristic->registerForNotify(notifyCallback);
-        Serial.println("Sensor BLE notify registered.");
-      }
-    }
-  } else {
-    Serial.println("Sensor BLE reconnect failed!");
-  }
-}
-
-// ═══════════════════════════════════════════
-// JY901S 解析: 0x55 0x53 (不变)
+// JY901S 解析: 0x55 0x53
 // ═══════════════════════════════════════════
 void processSensor(HardwareSerial &serial, int &state, int &bufferIndex,
                    uint8_t buffer[], ImuData &imuData, const char *name) {
@@ -166,32 +93,32 @@ void processSensor(HardwareSerial &serial, int &state, int &bufferIndex,
 }
 
 // ═══════════════════════════════════════════
-// 角度归一化 (不变)
+// 角度归一化
 // ═══════════════════════════════════════════
-void normalizeAnglePressure() {
-  AnglePressure[0] = upperArmData.roll - zero_error_roll_upper;
-  AnglePressure[1] = upperArmData.pitch - zero_error_pitch_upper;
-  AnglePressure[2] = upperArmData.yaw - zero_error_yaw_upper;
-  AnglePressure[3] = lowerArmData.roll - zero_error_roll_lower;
-  AnglePressure[4] = lowerArmData.pitch - zero_error_pitch_lower;
-  AnglePressure[5] = lowerArmData.yaw - zero_error_yaw_lower;
+void normalizeAngles() {
+  armAngles[0] = upperArmData.roll - zero_error_roll_upper;
+  armAngles[1] = upperArmData.pitch - zero_error_pitch_upper;
+  armAngles[2] = upperArmData.yaw - zero_error_yaw_upper;
+  armAngles[3] = lowerArmData.roll - zero_error_roll_lower;
+  armAngles[4] = lowerArmData.pitch - zero_error_pitch_lower;
+  armAngles[5] = lowerArmData.yaw - zero_error_yaw_lower;
 
   for (int i = 0; i < 6; i++) {
     if (i == 1 || i == 4) continue;
-    AnglePressure[i] = fmod(AnglePressure[i], 360.0);
-    if (AnglePressure[i] > 180) AnglePressure[i] -= 360;
-    else if (AnglePressure[i] < -180) AnglePressure[i] += 360;
+    armAngles[i] = fmod(armAngles[i], 360.0);
+    if (armAngles[i] > 180) armAngles[i] -= 360;
+    else if (armAngles[i] < -180) armAngles[i] += 360;
   }
   for (int i = 1; i < 6; i += 3) {
-    AnglePressure[i] = fmod(AnglePressure[i], 360.0);
-    if (AnglePressure[i] > 180) AnglePressure[i] -= 360;
-    else if (AnglePressure[i] < -180) AnglePressure[i] += 360;
-    if (AnglePressure[i] > 90) {
-      AnglePressure[i] = 180 - AnglePressure[i];
-      AnglePressure[i] = -AnglePressure[i];
-    } else if (AnglePressure[i] < -90) {
-      AnglePressure[i] = -180 - AnglePressure[i];
-      AnglePressure[i] = -AnglePressure[i];
+    armAngles[i] = fmod(armAngles[i], 360.0);
+    if (armAngles[i] > 180) armAngles[i] -= 360;
+    else if (armAngles[i] < -180) armAngles[i] += 360;
+    if (armAngles[i] > 90) {
+      armAngles[i] = 180 - armAngles[i];
+      armAngles[i] = -armAngles[i];
+    } else if (armAngles[i] < -90) {
+      armAngles[i] = -180 - armAngles[i];
+      armAngles[i] = -armAngles[i];
     }
   }
 }
@@ -201,20 +128,24 @@ void normalizeAnglePressure() {
 // ═══════════════════════════════════════════
 void onEspNowSend(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {}
 
+void onEspNowRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
+  if (len == sizeof(EspNowCmd) && data[0] == 0x43 && data[1] == 'C') {
+    Serial.println("[CMD] 收到校准指令");
+    calibrateRequested = true;
+  }
+}
+
 void sendArmDataViaEspNow() {
   ArmEspNowPacket pkt;
   pkt.header = 0x41;
-  pkt.side =
 #ifdef LEFT
-    'L';
+  pkt.side = 'L';
 #else
-    'R';
+  pkt.side = 'R';
 #endif
 
   for (int i = 0; i < 6; i++)
-    pkt.angles[i] = (int16_t)round(AnglePressure[i] * 100.0f);
-  for (int i = 0; i < 18; i++)
-    pkt.pressures[i] = (uint16_t)round(AnglePressure[6 + i]);
+    pkt.angles[i] = (int16_t)round(armAngles[i] * 100.0f);
 
   uint16_t sum = 0;
   uint8_t *raw = (uint8_t *)&pkt;
@@ -232,33 +163,13 @@ void setupEspNow() {
     ESP.restart();
   }
   esp_now_register_send_cb(onEspNowSend);
+  esp_now_register_recv_cb(onEspNowRecv);
   memset(&peerInfo, 0, sizeof(peerInfo));
   memcpy(peerInfo.peer_addr, WAIST_MAC, 6);
   peerInfo.channel = 0;
   peerInfo.encrypt = false;
   esp_now_add_peer(&peerInfo);
   Serial.println("[ESP-NOW] TX 就绪 → 腰间 S3");
-}
-
-// ═══════════════════════════════════════════
-// 压力鞋垫 BLE Client 初始化
-// ═══════════════════════════════════════════
-void setupSensorBleClient() {
-  pClient = BLEDevice::createClient();
-  Serial.println("Connecting to sensor BLE device...");
-  if (pClient->connect(targetAddress)) {
-    Serial.println("Sensor BLE connected.");
-    BLERemoteService *pSvc = pClient->getService(sensorServiceUUID);
-    if (pSvc) {
-      pNotifyCharacteristic = pSvc->getCharacteristic(sensorNotifyUUID);
-      if (pNotifyCharacteristic && pNotifyCharacteristic->canNotify()) {
-        pNotifyCharacteristic->registerForNotify(notifyCallback);
-        Serial.println("Sensor BLE notify enabled.");
-      }
-    }
-  } else {
-    Serial.println("Sensor BLE connection failed!");
-  }
 }
 
 // ═══════════════════════════════════════════
@@ -319,13 +230,10 @@ void calculateZeroError() {
 void setup() {
   Serial.begin(115200);
   delay(300);
-  Serial.println("\n[RGC] 肘部采集器启动 (ESP-NOW TX)");
+  Serial.println("\n[RGC] 肘部采集器启动 (仅 IMU → ESP-NOW)");
 
   setupImuAndPins();
-  calculateZeroError();
-
-  BLEDevice::init("RGC-ARM");
-  setupSensorBleClient();
+  // 校准由前端或上电后手动触发，不在 setup 中自动执行
   setupEspNow();
 }
 
@@ -333,14 +241,20 @@ void setup() {
 // LOOP
 // ═══════════════════════════════════════════
 void loop() {
-  if (pClient && !pClient->isConnected())
-    reconnectSensorBle();
+  if (calibrateRequested) {
+    calibrateRequested = false;
+    sum_roll_upper = 0; sum_pitch_upper = 0; sum_yaw_upper = 0;
+    sum_roll_lower = 0; sum_pitch_lower = 0; sum_yaw_lower = 0;
+    Serial.println("[CAL] 开始重新校准...");
+    calculateZeroError();
+    Serial.println("[CAL] 校准完成");
+  }
 
   processSensor(upperArmSerial, state1, bufferIndex1, buffer1, upperArmData, "upperArm");
   processSensor(lowerArmSerial, state2, bufferIndex2, buffer2, lowerArmData, "lowerArm");
 
   if (upperArmData.newData && lowerArmData.newData) {
-    normalizeAnglePressure();
+    normalizeAngles();
     upperArmData.newData = false;
     lowerArmData.newData = false;
 
@@ -349,7 +263,5 @@ void loop() {
       sendArmDataViaEspNow();
       lastSendMs = now;
     }
-    // newData 标志只有在新数据到达时才会被 processSensor 重新置 true，
-    // 此处仅记录"已处理过"，丢掉中间帧是目的性降采样（100Hz→33Hz）
   }
 }
