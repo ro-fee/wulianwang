@@ -11,7 +11,7 @@
 // #define LEFT
 #define RIGHT
 
-static const uint8_t WAIST_MAC[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // ← 替换
+static const uint8_t WAIST_MAC[] = {0x28, 0x84, 0x85, 0x6D, 0x67, 0xFC}; // ← 替换
 
 static const unsigned long SEND_INTERVAL_MS = 30;
 static const float SIM_FREQ_HZ = 1.0f;

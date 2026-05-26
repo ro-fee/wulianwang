@@ -5,11 +5,11 @@
 #include <math.h>
 
 // ── 选左/右腿 ──
-// #define LEFT
-#define RIGHT
+#define LEFT
+//#define RIGHT
 
 // ── ESP-NOW 目标: 腰间 S3 MAC ──
-static const uint8_t WAIST_MAC[] = {0x28, 0x84, 0x85, 0x6D, 0x68, 0x0C}; // ← 替换为实际 MAC
+static const uint8_t WAIST_MAC[] = {0x28, 0x84, 0x85, 0x6D, 0x67, 0xFC}; // ← 替换为实际 MAC
 
 static const unsigned long SEND_INTERVAL_MS = 30;
 

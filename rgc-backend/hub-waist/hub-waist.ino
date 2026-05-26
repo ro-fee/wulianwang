@@ -8,8 +8,8 @@
 #include <WiFi.h>
 
 // ── 选左/右 (烧录时改 #define) ──
-// #define LEFT
-#define RIGHT
+#define LEFT
+//#define RIGHT
 
 // ── BLE Server 参数 (连接 PC) ──
 static const char *BLE_SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";

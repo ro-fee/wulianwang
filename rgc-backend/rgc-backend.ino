@@ -4,11 +4,11 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-// #define LEFT
-#define RIGHT
+#define LEFT
+//#define RIGHT
 
 // ── ESP-NOW 目标: 腰间 S3 MAC (烧录前替换为实际 MAC 地址！) ──
-static const uint8_t WAIST_MAC[] = {0x28, 0x84, 0x85, 0x6D, 0x68, 0x0C}; // ← 替换为实际 MAC
+static const uint8_t WAIST_MAC[] = {0x28, 0x84, 0x85, 0x6D, 0x67, 0xFC}; // ← 替换为实际 MAC
 
 static const unsigned long ESP_NOW_SEND_INTERVAL_MS = 30;
 
@@ -177,11 +177,11 @@ void setupEspNow() {
 // ═══════════════════════════════════════════
 void setupImuAndPins() {
 #ifdef RIGHT
-  upperArmSerial.begin(115200, SERIAL_8N1, 2, 3);
-  lowerArmSerial.begin(115200, SERIAL_8N1, 10, 11);
+  upperArmSerial.begin(9600, SERIAL_8N1, 2, 3);
+  lowerArmSerial.begin(9600, SERIAL_8N1, 10, 11);
 #else
-  upperArmSerial.begin(115200, SERIAL_8N1, 10, 11);
-  lowerArmSerial.begin(115200, SERIAL_8N1, 2, 3);
+  upperArmSerial.begin(9600, SERIAL_8N1, 10, 11);
+  lowerArmSerial.begin(9600, SERIAL_8N1, 2, 3);
 #endif
   Serial.println("IMU serial initialized.");
   pinMode(1, OUTPUT);  pinMode(4, OUTPUT);
